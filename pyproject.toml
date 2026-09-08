@@ -1,0 +1,6 @@
+[project]
+name = "MBRL_selfdriving"
+version = "0.1.0"
+
+[tool.setuptools]
+py-modules = ["highway_env_setup"]

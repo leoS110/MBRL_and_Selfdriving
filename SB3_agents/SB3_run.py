@@ -1,14 +1,18 @@
-import gymnasium as gym, highway_env
 from stable_baselines3 import PPO
 from pathlib import Path
+import gymnasium as gym, highway_env
 from gymnasium.wrappers import RecordVideo
 
-MODEL_PATH = Path(__file__).parent / "ppo_highway_1"
+#import RL agent
+MODEL_PATH = Path(__file__).parent / "ppo_highway_2"
 model = PPO.load(MODEL_PATH) 
-env = gym.make("highway-fast-v0", render_mode="rgb_array")
+
+#import gymnasium as gym, highway_env
+from highway_env_setup import env_params
+env = gym.make("highway-v0", config=env_params, render_mode="rgb_array")
 
 #video recording
-env = RecordVideo(env, video_folder="SB3/videos", episode_trigger=lambda e: e == 0 , fps=110) 
+env = RecordVideo(env, video_folder="videos", episode_trigger=lambda e: e == 0 , fps=110) 
 env.unwrapped.set_record_video_wrapper(env)
 
 # Reset the environment to generate the first observation
