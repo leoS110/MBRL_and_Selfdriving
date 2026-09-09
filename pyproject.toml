@@ -3,4 +3,4 @@ name = "MBRL_selfdriving"
 version = "0.1.0"
 
 [tool.setuptools]
-py-modules = ["highway_env_setup"]
+py-modules = ["highway_env_setup", "parking_env_setup"]

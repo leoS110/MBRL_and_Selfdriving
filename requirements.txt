@@ -3,6 +3,7 @@ gymnasium==1.3.0
 stable-baselines3==2.9.0
 highway-env==1.12.1
 moviepy>=2.0
+tensorboard==2.21.0
 
 # to open venv: C:\venvs\mbrl_highway_venv\Scripts\Activate.ps1
 # to check installations run 'pip list'
