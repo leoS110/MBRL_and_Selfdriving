@@ -1,5 +1,5 @@
 import gymnasium as gym, highway_env
-from parking_env_setup import env_params_discreteA
+from parking_env_setup import env_params_discreteA_withoutcars
 from stable_baselines3 import DQN
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import BaseCallback, EvalCallback
@@ -35,7 +35,7 @@ class VisualEvalCallback(BaseCallback): #creates a rendering environment at peri
 
 #DQN agent
 dqn_params = dict(
-    learning_rate=8e-4,
+    learning_rate=6e-4,
     buffer_size=20_000,
     learning_starts=200,
     batch_size=150,

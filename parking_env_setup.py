@@ -1,6 +1,36 @@
 import numpy as np
 
-env_params_discreteA: dict =  {
+env_params_discreteA_withcars: dict =  {
+    "observation": {
+        "type": "KinematicsGoal",
+        "features": ['x', 'y', 'vx', 'vy', 'cos_h', 'sin_h'],
+        "scales": [100, 100, 5, 5, 1, 1],
+        "normalize": False
+    },
+    "action": {
+        "type": "DiscreteAction"
+    },
+    "reward_weights": [1, 0.3, 0, 0, 0.02, 0.02],
+    "success_goal_reward": 0.12,
+    "collision_reward": -10,
+    "steering_range": np.deg2rad(45),
+    "simulation_frequency": 10,
+    "policy_frequency": 5,
+    "duration": 10,
+    "controlled_vehicles": 1,
+    "vehicles_count": 26,
+    "add_walls": True,
+    "screen_width": 600,
+    "screen_height": 300,
+    "centering_position": [0.5, 0.5],
+    "scaling": 7,
+    "show_trajectories": True,
+    "render_agent": True,
+    "offscreen_rendering": None
+}
+
+#dqn_parking_4: no cars + modified reward
+env_params_discreteA_emptyparking: dict =  {
     "observation": {
         "type": "KinematicsGoal",
         "features": ['x', 'y', 'vx', 'vy', 'cos_h', 'sin_h'],
