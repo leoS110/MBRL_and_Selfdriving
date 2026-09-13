@@ -8,15 +8,17 @@ env_params_discreteA_withcars: dict =  {
         "normalize": False
     },
     "action": {
-        "type": "DiscreteAction"
+        "type": "DiscreteAction",
+        "actions_per_axis": 7, #standard is 3
+        "acceleration_range": (-3.0, 3.0) #standard is -5, 5
     },
     "reward_weights": [1, 0.3, 0, 0, 0.02, 0.02],
     "success_goal_reward": 0.12,
-    "collision_reward": -10,
+    "collision_reward": -20,
     "steering_range": np.deg2rad(45),
     "simulation_frequency": 10,
     "policy_frequency": 5,
-    "duration": 10,
+    "duration": 14,
     "controlled_vehicles": 1,
     "vehicles_count": 26,
     "add_walls": True,
@@ -24,7 +26,7 @@ env_params_discreteA_withcars: dict =  {
     "screen_height": 300,
     "centering_position": [0.5, 0.5],
     "scaling": 7,
-    "show_trajectories": True,
+    "show_trajectories": False,
     "render_agent": True,
     "offscreen_rendering": None
 }

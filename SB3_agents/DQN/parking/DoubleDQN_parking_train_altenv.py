@@ -8,7 +8,7 @@ from stable_baselines3 import DQN
 
 #for callbacks & vis
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.callbacks import BaseCallback, EvalCallback
+from stable_baselines3.common.callbacks import BaseCallback, EvalCallback, CheckpointCallback
 from stable_baselines3.common.evaluation import evaluate_policy
 import time
 
@@ -134,19 +134,19 @@ class VisualEvalCallback(BaseCallback): #creates a rendering environment at peri
 
 #DQN agent params
 dqn_params = dict(
-    learning_rate=6e-4,
-    buffer_size=20_000,
-    learning_starts=200,
+    learning_rate=4e-4,
+    buffer_size=300_000,
+    learning_starts=5000,
     batch_size=150,
-    gamma=0.98,
+    gamma=0.96,
     train_freq=1,
     gradient_steps=1,
-    target_update_interval=200,
+    target_update_interval=400,
     policy_kwargs=dict(net_arch=[256, 256]), 
     seed=0,
     verbose=1,
     device="cpu", #options: "cpu", "cuda", "cuda:0", or "mps"
-    exploration_fraction=0.1, #fraction of entire training period over which the exploration rate is reduced, seems low?
+    exploration_fraction=0.2, #fraction of entire training period over which the exploration rate is reduced, seems low?
     exploration_initial_eps=1.0, 
     exploration_final_eps=0.05, 
 )
@@ -162,15 +162,24 @@ headless_eval_env = gym.make("parking-v0", config=env_params_discreteA_withcars)
 headless_eval_env = Monitor(headless_eval_env)
 eval_callback = EvalCallback(
     headless_eval_env,
-    eval_freq=5_000,                  
+    eval_freq=50_000,                  
     n_eval_episodes=2,                      
     deterministic=True,                    
     render=False                             
 )
 visual_callback = VisualEvalCallback(eval_freq=1000, n_eval_episodes=2)
 
+#for regular model saving
+checkpoint_callback = CheckpointCallback(
+    save_freq=100_000, 
+    save_path="./checkpoints/",
+    name_prefix="ddqn_parking",
+    save_replay_buffer=True 
+)
+
 
 #train
 print(f"Model is training on: {model.device}")
-model.learn(total_timesteps=110_000, callback=[eval_callback, visual_callback], progress_bar=True)
-model.save("ddqn_parking_1")
+#model.learn(total_timesteps=800_000, callback=[eval_callback, visual_callback], progress_bar=True)
+model.learn(total_timesteps=800_000, callback=[eval_callback, checkpoint_callback], progress_bar=True)
+model.save("ddqn_parking_2")
