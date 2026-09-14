@@ -1,3 +1,9 @@
 __pycache__/
 *.egg-info/
 checkpoints
+SB3_agents/DQN/parking/training_on_full_parking_lot_multi_goal/agents/dqn_parking_2.zip
+SB3_agents/DQN/parking/training_on_full_parking_lot_multi_goal/agents/ddqn_parking_replay_buffer_700000_steps.pkl
+SB3_agents/DQN/parking/training_on_full_parking_lot_multi_goal/agents/ddqn_parking_900000_steps.zip
+SB3_agents/DQN/parking/training_on_full_parking_lot_multi_goal/agents/ddqn_parking_700000_steps.zip
+SB3_agents/DQN/parking/training_on_empty_parking_lot_multi_goal/agents/ddqn_emptyparking_replay_buffer_500000_steps.pkl
+SB3_agents/DQN/parking/training_on_full_parking_lot_multi_goal/agents/dqn_parking_1.zip
