@@ -95,7 +95,7 @@ class VisualEvalCallback(BaseCallback): #creates a rendering environment at peri
         if self.n_calls % self.eval_freq == 0:
             print(f"\nVisual Evaluation at Step {self.num_timesteps}")
             
-            eval_env = gym.make("parking-v0", config=env_params_discreteA_empty, render_mode="human")
+            eval_env = gym.make("parking-v0", config=env_params_discreteA_empty_modreward, render_mode="human")
             
             for episode in range(self.n_eval_episodes):
                 obs, info = eval_env.reset()
@@ -140,9 +140,9 @@ headless_eval_env = gym.make("parking-v0", config=env_params_discreteA_empty_mod
 headless_eval_env = Monitor(headless_eval_env)
 eval_callback = EvalCallback(
     headless_eval_env,
-    est_model_save_path="./logs/best/"
-    eval_freq=50_000,                  
-    n_eval_episodes=10,                      
+    best_model_save_path="./logs/best/",
+    eval_freq=25_000,                  
+    n_eval_episodes=15,                      
     deterministic=True,                    
     render=False                             
 )
@@ -150,7 +150,7 @@ visual_callback = VisualEvalCallback(eval_freq=1000, n_eval_episodes=2)
 
 #for regular model saving
 checkpoint_callback = CheckpointCallback(
-    save_freq=100_000, 
+    save_freq=50_000, 
     save_path="./checkpoints/",
     name_prefix="ddqn_emptyparking",
     save_replay_buffer=True 

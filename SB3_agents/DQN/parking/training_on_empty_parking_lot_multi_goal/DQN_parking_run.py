@@ -1,23 +1,23 @@
 import gymnasium as gym, highway_env
-from parking_env_setup import env_params_discreteA_empty
-env = gym.make("parking-v0", config=env_params_discreteA_empty,  render_mode="rgb_array")
+from parking_env_setup import env_params_discreteA_semiempty_modreward
+env = gym.make("parking-v0", config=env_params_discreteA_semiempty_modreward,  render_mode="rgb_array")
 from gymnasium.wrappers import RecordVideo
 import imageio
 
 #agent
 from stable_baselines3 import DQN
 from pathlib import Path
-MODEL_PATH = Path(__file__).parent / "agents/ddqn_emptyparking_500000_steps.zip"
+MODEL_PATH = Path(__file__).parent / "agents/emptyparking_best_model.zip"
 model = DQN.load(MODEL_PATH) 
 import time
 
 #video recording
 #env = RecordVideo(env, video_folder="videos", episode_trigger=lambda e: True ) #gym by default can only record one rollout
 #env.unwrapped.set_record_video_wrapper(env)
-video_path = "videos/parking_noobstacles_2.mp4"
+video_path = "videos/parking_noobstacles_7.mp4"
 writer = imageio.get_writer(video_path, fps=30)
 
-num_rollouts = 20
+num_rollouts = 8
 for episode in range(num_rollouts):
     # Reset the environment to generate the first observation
     obs, info = env.reset()
