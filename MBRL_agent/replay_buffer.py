@@ -20,9 +20,7 @@ import warnings
 from typing import Any, List, Optional, Sequence, Sized, Tuple, Type, Union
 import numpy as np
 
-#Transition batch def: 
-import transitionbatch
-
+from transitionbatch import TransitionBatch 
 
 #Replay buffer def:
 
