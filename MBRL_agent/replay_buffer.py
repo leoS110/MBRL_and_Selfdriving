@@ -2,12 +2,13 @@
 #since only used as a util: code taken directly from facebook research / UC Berkeley MBRL library 
 #https://github.com/facebookresearch/mbrl-lib/tree/main
 #https://arxiv.org/abs/2104.10159
-#only the core functions kept: all references to storing / manipulating trajectories removed
+#only the core functions kept: all references to storing / manipulating trajectories removed (incl. in add & save functions)
 
 #core functionality: stores transitions in a set of numpy arrays, indexes corresponding to transition number
 #functions: __init__, add, add_batch, sample, _batch_from_indices, save, load, get_all
+#added function: get_statistics (assumes a 1D vector observation and action)
 
-#Transition batch: a dataclass defined in MBRL libary for storing multiple transitions, just a set of numpy arrays (with some bool for truncated/terminated)
+#Transition batch: a dataclass defined in MBRL libary for storing multiple transitions, just a set of numpy arrays in a tuple (with some bool for truncated/terminated)
 #https://github.com/facebookresearch/mbrl-lib/blob/main/mbrl/types.py
 
 #to check: saving logic & functionality
@@ -103,11 +104,9 @@ class ReplayBuffer:
         self.terminated[self.cur_idx] = terminated
         self.truncated[self.cur_idx] = truncated
 
-        if self.trajectory_indices is not None:
-            self._trajectory_bookkeeping(terminated or truncated)
-        else:
-            self.cur_idx = (self.cur_idx + 1) % self.capacity
-            self.num_stored = min(self.num_stored + 1, self.capacity)
+        
+        self.cur_idx = (self.cur_idx + 1) % self.capacity
+        self.num_stored = min(self.num_stored + 1, self.capacity)
 
     def add_batch(
         self,
@@ -244,6 +243,31 @@ class ReplayBuffer:
                 self.terminated[: self.num_stored],
                 self.truncated[: self.num_stored],
             )
+
+
+    def get_statistics(self):
+
+            #need to rewrite 
+
+            
+            #assumes that observation and action are 1D arrays
+
+            obs, act, next_obs, *_ = self.get_all().astuple() #unpack tuple
+
+            #state diff tensor (referring to state and observation interchangably here)
+            state_diff = next_obs - obs
+            states_num = state_diff.shape[1]
+            statediff_means = np.empty(1,states_num)
+            statediff_stds = np.empty(1,states_num)
+
+            for column in range(states_num):
+                statediff_i_mean = np.mean(state_diff[:, column])
+                statediff_i_std = np.std(state_diff[:, column])
+
+                statediff_means.append(statediff_i_mean)
+                statediff_stds.append(statediff_i_std)
+
+            return statediff_means, statediff_stds # (1, n_states) numpy arrays with the means and stds of each of the state differences in buffer
 
     @property
     def rng(self) -> np.random.Generator:

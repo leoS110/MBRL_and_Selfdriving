@@ -23,7 +23,7 @@ class TransitionConfig:
 
 nn_params = TransitionConfig()
 
-#Define NN: forward pass, loss, optimizer
+#Define NN: forward pass, loss, optimizer 
 class pytorchNN(nn.Module):                             
     def __init__(self, dimension_in, dimension_out, n_width, n_layers, act=nn.ReLU):   
         super().__init__()                        # must run first: creates the parameter/module registries
@@ -39,6 +39,16 @@ class pytorchNN(nn.Module):
  
     def forward(self, x):                         # runs on every batch; autograd records it as it executes
         return self.net(x)                        # Sequential applies each child module in order
+
+
+#should this be part of the class?
+def get_state_dif(model, state, action, state_diff_mean, state_diff_standarddev):
+
+    #scale and shift the neural network output to get delta_s
+
+
+    return delta_s
+
 
 #to define:
 #transition_model = pytorchNN(nn_params.dimension_in, nn_params.dimension_out, nn_params.n_width, nn_params.n_layers)
