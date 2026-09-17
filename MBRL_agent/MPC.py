@@ -3,11 +3,47 @@
 
 import replay_buffer
 import numpy as np
+import torch
+from torch.distributions import MultivariateNormal
+
 from MBRL_train import train_params
 from transition_model import get_state_dif 
 
 
-def CEM_loop():
+def CEM_loop(model_list, initial_state):
+
+    #initialise A distribution p(A): (https://docs.pytorch.org/docs/2.14/distributions.html#multivariatenormal)
+    A_distribution = MultivariateNormal(torch.zeros(train_params.MPC_horizon*train_params.dimension_a), torch.eye(train_params.MPC_horizon*train_params.dimension_a))
+    #whole action sequence in one flat vector
+
+    #trajectory_store = np.empty(train_params.MPC_horizon*train_params.dimension_a, train_params.CEM_trajn)
+    
+
+    for CEM_loop_i in range(train_params.CEM_loopn):
+
+        reward_store = np.empty(1, train_params.CEM_trajn)
+
+        for sample_traj_i in range(train_params.CEM_trajn):
+
+            #resample CEM_trajn trajectories from p(A):
+            samples = A_distribution.sample((train_params.CEM_trajn,)) #tensor: (number of trajectories, trajectory vector length)
+            #reshape samples and clamp actions to bounds
+            samples_arrangedandbounded = samples.reshape(train_params.CEM_trajn, train_params.MPC_horizon, train_params.dimension_a).clamp(train_params.a_min, train_params.a_max)  #should probably check reshaping syntax                  
+
+            #Evaluate reward associated to each trajectory J(A), loop through samples
+            for sampled_traj_i in range(train_params.CEM_trajn):
+
+                A_i = samples_arrangedandbounded[sampled_traj_i, :, :]
+
+                reward_val = expected_MPC_reward(model_list, initial_state, A_i, state_diff_mean, state_diff_standarddev)
+
+                reward_store[sampled_traj_i] = reward_val
+
+        #pick elites 
+
+        #refit p(A) to elites 
+
+    #return best A as a numpy array
 
     return A
 
@@ -22,11 +58,13 @@ def expected_MPC_reward(model_list, initial_state, A, state_diff_mean, state_dif
     reward_val = 0.0
     state = initial_state
 
+    #curious about potential to alter reward to penalise model disagreement 
+
     for model in model_list: #sample based expectation under model parameter uncertainty
 
         for step_i in range(train_params.MPC_horizon):
             #take open loop action, change of state stepped through learnt model
-            action = A[:,step_i]
+            action = A[step_i,:]
             delta_state = get_state_dif(model, state, action, state_diff_mean, state_diff_standarddev) #assuming de-normalised by this point
             new_state = state + delta_state
 

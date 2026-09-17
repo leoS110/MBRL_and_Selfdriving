@@ -19,6 +19,8 @@ class TrainConfig:
     #environment specific paramaters: 
     dimension_o: int = 1                                
     dimension_a: int = 2 
+    a_min: float = 0.0
+    a_max: float = 1.0
 
     aggregation_iterations: int = 5
 
@@ -32,6 +34,8 @@ class TrainConfig:
     rollouts_per_aggregation: int = 400
 
     ensemble_size: int = 5
+
+    CEM_loopn: int = 30 #really not sure, check
 
     D_RAND_capacity: int = 1_000_000  #(just set to be large enough to never replace)
     D_RL_capacity: int = 1_000_000
