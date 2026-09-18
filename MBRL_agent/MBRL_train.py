@@ -35,7 +35,10 @@ class TrainConfig:
 
     ensemble_size: int = 5
 
-    CEM_loopn: int = 30 #really not sure, check
+    #really not sure, check: 
+    CEM_loopn: int = 30 
+    CEM_elitespicked: int = 100
+
 
     D_RAND_capacity: int = 1_000_000  #(just set to be large enough to never replace)
     D_RL_capacity: int = 1_000_000

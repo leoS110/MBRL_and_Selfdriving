@@ -40,12 +40,24 @@ def CEM_loop(model_list, initial_state):
                 reward_store[sampled_traj_i] = reward_val
 
         #pick elites 
+        top_n_indices = np.argsort(-reward_store)[:train_params.CEM_elitespicked] #negates, sorts, and slices the first terms
+        samples_elites = samples_arrangedandbounded[top_n_indices, :, :] #not sure about indexing here
 
-        #refit p(A) to elites 
+        #refit p(A) to elites: define a new multivariate normal based off of elite action paths, tensors
+        samples_elites = samples_elites.reshape(train_params.CEM_elitespicked, train_params.MPC_horizon*train_params.dimension_a) #reshape back into (number of elites, vector length of multivariate sampling)
+        new_mean_tensor = samples_elites.mean(dim = 0)
+        new_cov_tensor = torch.cov(samples_elites.T)  #pytorch estimates full covariance matrix, transpose is just to align with what pytorch function expects
+        #claude recommends doing a jitter here, check:
+        new_cov_tensor = new_cov_tensor + 1e-4 * torch.eye(train_params.CEM_elitespicked)  
+
+        A_distribution = MultivariateNormal(new_mean_tensor, covariance_matrix=new_cov_tensor)
+
 
     #return best A as a numpy array
+    top_1_index = np.argsort(-reward_store)[:1]
+    A_best = samples_arrangedandbounded[top_1_index, :, :] #(horizon, dimension_a)
 
-    return A
+    return A_best
 
 
 
