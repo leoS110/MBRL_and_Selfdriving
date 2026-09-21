@@ -1,13 +1,15 @@
 #CEM
 #(using state and observation interchangably, assuming fully observed / no representation learning)
+from config import TrainConfig
 
 import replay_buffer
 import numpy as np
 import torch
 from torch.distributions import MultivariateNormal
-
-from MBRL_train import train_params
 from transition_model import get_state_dif 
+
+
+train_params = TrainConfig()
 
 
 def CEM_loop(model_list, initial_state, statediff_means_tensor, statediff_stds_tensor, x_means_tensor, x_stds_tensor):
@@ -64,12 +66,12 @@ def CEM_loop(model_list, initial_state, statediff_means_tensor, statediff_stds_t
 
 def expected_MPC_reward(model_list, initial_state, A, statediff_means_tensor, statediff_stds_tensor, x_means_tensor, x_stds_tensor): 
     
-    reward_val = 0.0
-    state = initial_state
-
     #curious about potential to alter reward to penalise model disagreement 
 
     for model in model_list: #sample based expectation under model parameter uncertainty
+
+        reward_val = 0.0
+        state = initial_state
 
         for step_i in range(train_params.MPC_horizon):
             #take open loop action, change of state stepped through learnt model

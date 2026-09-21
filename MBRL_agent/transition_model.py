@@ -2,26 +2,8 @@ import torch
 import torch.nn as nn
 from dataclasses import dataclass, field  
 
-from MBRL_train import train_params
-
-#NN paramaters
-@dataclass                                   
-class TransitionConfig:
-
-    #input and output data:
-    dimension_in: int = train_params.dimension_o + train_params.dimension_a                              
-    dimension_out: int = train_params.dimension_o
-
-    #NN parameters:   #check paper what they used                           
-    n_width: int = 50                       
-    n_layers: int = 4 #hidden layers, not including output
-
-    #optimisation parameters:
-    lr: float = 1e-3                                            
-                
-    #devide allocation:
-    device: torch.device = torch.device("cpu") #or "cuda"
-    seed: int = 0 
+#from MBRL_train import train_params #problem
+from config import TransitionConfig
 
 nn_params = TransitionConfig()
 

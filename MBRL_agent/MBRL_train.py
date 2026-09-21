@@ -6,47 +6,15 @@ import torch.nn as nn
 from dataclasses import dataclass, field 
 import gymnasium as gym 
 
-#import key class definitions
+#import definitions
+
+from config import TrainConfig, TransitionConfig
+
 from transitionbatch import TransitionBatch 
 from replay_buffer import ReplayBuffer 
-from transition_model import TransitionConfig
 from transition_model import pytorchNN
 from MPC import CEM_loop
 
-#NN paramaters
-@dataclass                                   
-class TrainConfig:
-    #environment specific paramaters: 
-    dimension_o: int = 1                                
-    dimension_a: int = 2 
-    a_min: float = 0.0
-    a_max: float = 1.0
-
-    aggregation_iterations: int = 5
-
-    #algorithm parameters:
-    SGD_batch_size: int = 512 
-    Drand_proportion: float = 0.1
-    Drl_proportion: float = 0.9
-    MPC_horizon: int = 10 
-    CEM_trajn: int = 1000
-    SGD_steps: int = 60
-    rollouts_per_aggregation: int = 400
-
-    ensemble_size: int = 5
-
-    #really not sure, check: 
-    CEM_loopn: int = 30 
-    CEM_elitespicked: int = 100
-
-
-    D_RAND_capacity: int = 1_000_000  #(just set to be large enough to never replace)
-    D_RL_capacity: int = 1_000_000
-
-    #random trajectory parameters: (fully eyeballed values)
-    rand_traj_length: int = 200
-    rand_traj_n: int = 100
-     
 train_params = TrainConfig()
 
 #setup env:
@@ -148,45 +116,46 @@ for loop_i in range(train_params.aggregation_iterations):
         
         #can evaluate loss for loss curve here
     
-        #for SGD, generate a batch from training data:
-        D_training = sample_mixed(D_RAND, D_RL, train_params.SGD_batch_size, train_params.Drl_proportion)
-        #normalise training data with mean and standard deviation:
-
-        #prepare data for pytorch neural network 
-        obs, act, next_obs, rewards, terminateds, truncateds = D_training.astuple() #unpack tuple, each item now a pytorch tensor of individual 
-
-        obs_tensor = torch.as_tensor(obs, dtype=torch.float32)
-        act_tensor = torch.as_tensor(act, dtype=torch.float32)
-        next_obs_tensor = torch.as_tensor(next_obs, dtype=torch.float32)
-        if obs_tensor.ndim == 1:
-            obs_tensor = obs_tensor.unsqueeze(-1) #make (batchsize, 1) rather than (batchsize,) in the case of scalar observations or actions
-        if act_tensor.ndim == 1:
-            act_tensor = act_tensor.unsqueeze(-1) 
-        x_training = torch.cat([obs_tensor, act_tensor], dim=-1)
-
-        #normalisation, both of x and y 
-        #x:
-        state_means_tensor = torch.as_tensor(state_means, dtype=torch.float32)
-        state_stds_tensor = torch.as_tensor(state_stds, dtype=torch.float32)        
-        act_means_tensor = torch.as_tensor(act_means, dtype=torch.float32)
-        act_stds_tensor = torch.as_tensor(act_stds, dtype=torch.float32)  
-        x_means_tensor = torch.cat([state_means_tensor, act_means_tensor], dim=-1)
-        x_stds_tensor = torch.cat([state_stds_tensor, act_stds_tensor], dim=-1)
-        x_training = (x_training - x_means_tensor)/x_stds_tensor
-
-        #y:
-        statediff_means_tensor = torch.as_tensor(statediff_means, dtype=torch.float32)
-        statediff_stds_tensor = torch.as_tensor(statediff_stds, dtype=torch.float32)
-        y_training = ((next_obs_tensor - obs_tensor) - statediff_means)/statediff_stds
-
-        #could add gaussian noise to x_training & y_training here:
-    
         for model_i in range(train_params.ensemble_size):
 
             model = model_list[model_i]
             optimiser = optimiser_list[model_i]
 
             optimiser.zero_grad(set_to_none=True) #zero the gradients from the last step so that they don't accumulate
+
+            #sampling a training data batch, different one for each model
+            D_training = sample_mixed(D_RAND, D_RL, train_params.SGD_batch_size, train_params.Drl_proportion)
+            #normalise training data with mean and standard deviation:
+
+            #prepare data for pytorch neural network 
+            obs, act, next_obs, rewards, terminateds, truncateds = D_training.astuple() #unpack tuple, each item now a pytorch tensor of individual 
+
+            obs_tensor = torch.as_tensor(obs, dtype=torch.float32)
+            act_tensor = torch.as_tensor(act, dtype=torch.float32)
+            next_obs_tensor = torch.as_tensor(next_obs, dtype=torch.float32)
+            if obs_tensor.ndim == 1:
+                obs_tensor = obs_tensor.unsqueeze(-1) #make (batchsize, 1) rather than (batchsize,) in the case of scalar observations or actions
+            if act_tensor.ndim == 1:
+                act_tensor = act_tensor.unsqueeze(-1) 
+            x_training = torch.cat([obs_tensor, act_tensor], dim=-1)
+
+            #normalisation, both of x and y 
+            #x:
+            state_means_tensor = torch.as_tensor(state_means, dtype=torch.float32)
+            state_stds_tensor = torch.as_tensor(state_stds, dtype=torch.float32)        
+            act_means_tensor = torch.as_tensor(act_means, dtype=torch.float32)
+            act_stds_tensor = torch.as_tensor(act_stds, dtype=torch.float32)  
+            x_means_tensor = torch.cat([state_means_tensor, act_means_tensor], dim=-1)
+            x_stds_tensor = torch.cat([state_stds_tensor, act_stds_tensor], dim=-1)
+            x_training = (x_training - x_means_tensor)/x_stds_tensor
+
+            #y:
+            statediff_means_tensor = torch.as_tensor(statediff_means, dtype=torch.float32)
+            statediff_stds_tensor = torch.as_tensor(statediff_stds, dtype=torch.float32)
+            y_training = ((next_obs_tensor - obs_tensor) - statediff_means)/statediff_stds
+
+            #could add gaussian noise to x_training & y_training here:
+
 
             #h(x), forward pass, autograd caching
             model_vals = model(x_training)  #CHECK X FORMAT HERE
