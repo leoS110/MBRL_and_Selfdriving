@@ -247,27 +247,56 @@ class ReplayBuffer:
 
     def get_statistics(self):
 
-            #need to rewrite 
-
             
             #assumes that observation and action are 1D arrays
 
+            eps = 1e-6 #guard against 0 std, i.e. constant s_i or a_i
+
             obs, act, next_obs, *_ = self.get_all().astuple() #unpack tuple
+
+            #normalise state differences:
 
             #state diff tensor (referring to state and observation interchangably here)
             state_diff = next_obs - obs
             states_num = state_diff.shape[1]
-            statediff_means = np.empty(1,states_num)
-            statediff_stds = np.empty(1,states_num)
+            statediff_means = np.empty((1,states_num),  dtype=np.float32)
+            statediff_stds = np.empty((1,states_num),  dtype=np.float32)
 
             for column in range(states_num):
                 statediff_i_mean = np.mean(state_diff[:, column])
                 statediff_i_std = np.std(state_diff[:, column])
+                statediff_i_std = np.where(statediff_i_std < eps, 1.0, statediff_i_std)
 
-                statediff_means.append(statediff_i_mean)
-                statediff_stds.append(statediff_i_std)
+                statediff_means[0,column] = statediff_i_mean
+                statediff_stds[0,column] = statediff_i_std
 
-            return statediff_means, statediff_stds # (1, n_states) numpy arrays with the means and stds of each of the state differences in buffer
+
+            #normalise q-states (s_t, a_t):
+
+            #s:
+            state_means = np.empty((1,states_num), dtype=np.float32)
+            state_stds = np.empty((1,states_num))
+            for column in range(states_num):
+                state_i_mean = np.mean(obs[:, column])
+                state_i_std = np.std(obs[:, column])
+                state_i_std = np.where(state_i_std < eps, 1.0, state_i_std)
+
+                state_means[0,column] = state_i_mean
+                state_stds[0,column] = state_i_std
+
+            #a:
+            act_num = act.shape[1]
+            act_means = np.empty((1,act_num), dtype=np.float32)
+            act_stds = np.empty((1,act_num), dtype=np.float32)
+            for column in range(act_num):
+                act_i_mean = np.mean(act[:, column])
+                act_i_std = np.std(act[:, column]) 
+                act_i_std = np.where(act_i_std < eps, 1.0, act_i_std)
+
+                act_means[0,column] = act_i_mean
+                act_stds[0,column] = act_i_std         
+
+            return statediff_means, statediff_stds, state_means, state_stds, act_means, act_stds # (1, n_states) numpy arrays with the means and stds of each of the state differences in buffer
 
     @property
     def rng(self) -> np.random.Generator:

@@ -2,13 +2,15 @@ import torch
 import torch.nn as nn
 from dataclasses import dataclass, field  
 
+from MBRL_train import train_params
+
 #NN paramaters
 @dataclass                                   
 class TransitionConfig:
 
     #input and output data:
-    dimension_in: int = 1                                
-    dimension_out: int = 2
+    dimension_in: int = train_params.dimension_o + train_params.dimension_a                              
+    dimension_out: int = train_params.dimension_o
 
     #NN parameters:   #check paper what they used                           
     n_width: int = 50                       
@@ -42,10 +44,17 @@ class pytorchNN(nn.Module):
 
 
 #should this be part of the class?
-def get_state_dif(model, state, action, state_diff_mean, state_diff_standarddev):
+def get_state_dif(model, state, action,  statediff_means_tensor, statediff_stds_tensor, x_means_tensor, x_stds_tensor):
 
-    #scale and shift the neural network output to get delta_s
+    #need to transfer state & action to tensors?
 
+    #normalise model input
+    x_val = torch.cat([state, action], dim=-1) #maybe should check dimensions of state & action
+    x_val_normalised = (x_val - x_means_tensor)/x_stds_tensor
+    model_val = model(x_val_normalised)
+
+    #de-normalise model output 
+    delta_s = model_val*statediff_stds_tensor + statediff_means_tensor
 
     return delta_s
 

@@ -10,11 +10,13 @@ from MBRL_train import train_params
 from transition_model import get_state_dif 
 
 
-def CEM_loop(model_list, initial_state):
+def CEM_loop(model_list, initial_state, statediff_means_tensor, statediff_stds_tensor, x_means_tensor, x_stds_tensor):
 
     #initialise A distribution p(A): (https://docs.pytorch.org/docs/2.14/distributions.html#multivariatenormal)
     A_distribution = MultivariateNormal(torch.zeros(train_params.MPC_horizon*train_params.dimension_a), torch.eye(train_params.MPC_horizon*train_params.dimension_a))
     #whole action sequence in one flat vector
+
+    initial_state_tensor = torch.as_tensor(initial_state, dtype=torch.float32)
 
     #trajectory_store = np.empty(train_params.MPC_horizon*train_params.dimension_a, train_params.CEM_trajn)
     
@@ -35,7 +37,7 @@ def CEM_loop(model_list, initial_state):
 
                 A_i = samples_arrangedandbounded[sampled_traj_i, :, :]
 
-                reward_val = expected_MPC_reward(model_list, initial_state, A_i, state_diff_mean, state_diff_standarddev)
+                reward_val = expected_MPC_reward(model_list, initial_state_tensor, A_i, statediff_means_tensor, statediff_stds_tensor, x_means_tensor, x_stds_tensor)
 
                 reward_store[sampled_traj_i] = reward_val
 
@@ -60,12 +62,7 @@ def CEM_loop(model_list, initial_state):
     return A_best
 
 
-
-
-
-
-
-def expected_MPC_reward(model_list, initial_state, A, state_diff_mean, state_diff_standarddev): 
+def expected_MPC_reward(model_list, initial_state, A, statediff_means_tensor, statediff_stds_tensor, x_means_tensor, x_stds_tensor): 
     
     reward_val = 0.0
     state = initial_state
@@ -77,7 +74,7 @@ def expected_MPC_reward(model_list, initial_state, A, state_diff_mean, state_dif
         for step_i in range(train_params.MPC_horizon):
             #take open loop action, change of state stepped through learnt model
             action = A[step_i,:]
-            delta_state = get_state_dif(model, state, action, state_diff_mean, state_diff_standarddev) #assuming de-normalised by this point
+            delta_state = get_state_dif(model, state, action, statediff_means_tensor, statediff_stds_tensor, x_means_tensor, x_stds_tensor) #assuming de-normalised by this point
             new_state = state + delta_state
 
             #calculate reward 

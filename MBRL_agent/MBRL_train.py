@@ -11,7 +11,7 @@ from transitionbatch import TransitionBatch
 from replay_buffer import ReplayBuffer 
 from transition_model import TransitionConfig
 from transition_model import pytorchNN
-from transition_model import get_state_dif
+from MPC import CEM_loop
 
 #NN paramaters
 @dataclass                                   
@@ -45,12 +45,12 @@ class TrainConfig:
 
     #random trajectory parameters: (fully eyeballed values)
     rand_traj_length: int = 200
-    rand_traj_n: int = 10
+    rand_traj_n: int = 100
      
 train_params = TrainConfig()
 
 #setup env:
-env = gym.make("CartPole-v1", render_mode="human")
+env = gym.make('HalfCheetah-v5') #cpst weight defaults in 
 observation, info = env.reset()
 
 
@@ -113,14 +113,35 @@ for i in range(train_params.ensemble_size):
 loss_fn = nn.MSELoss()   
 
 #Gather set of random trajectories and add to dedicated reply buffer (+ combined replay buffer):
+rng = np.random.default_rng()
 
+for rand_traj_i in range(train_params.rand_traj_n):
+        
+        for step_i in range(train_params.rand_traj_length):
 
+            action = rng.uniform(train_params.a_min, train_params.a_max, size=(1, train_params.dimension_a))
+
+            next_observation, reward, terminated, truncated, info = env.step(action)
+
+            D_RAND.add(obs=observation, action=action, next_obs=next_observation, reward=reward, terminated=terminated, truncated=truncated)
+            D_combined.add(obs=observation, action=action, next_obs=next_observation, reward=reward, terminated=terminated, truncated=truncated)
+
+            if terminated or truncated:
+                observation, info = env.reset()
+            else:
+                observation = next_observation
+
+        observation, info = env.reset()
+    
 
 
 observation, info = env.reset()
 
 #aggregation and training loop
 for loop_i in range(train_params.aggregation_iterations):
+
+    #get normalisation stats:
+    statediff_means, statediff_stds, state_means, state_stds, act_means, act_stds = D_combined.get_statistics()
 
     #train transition model on buffer
     for optimisation_i in range(train_params.SGD_steps):
@@ -143,11 +164,20 @@ for loop_i in range(train_params.aggregation_iterations):
             act_tensor = act_tensor.unsqueeze(-1) 
         x_training = torch.cat([obs_tensor, act_tensor], dim=-1)
 
-        #for stats, do we use the one of the larger buffer?
-        statediff_means, statediff_stds = D_combined.get_statistics()
-        y_training = ((next_obs_tensor - obs_tensor) - statediff_means)/statediff_stds
+        #normalisation, both of x and y 
+        #x:
+        state_means_tensor = torch.as_tensor(state_means, dtype=torch.float32)
+        state_stds_tensor = torch.as_tensor(state_stds, dtype=torch.float32)        
+        act_means_tensor = torch.as_tensor(act_means, dtype=torch.float32)
+        act_stds_tensor = torch.as_tensor(act_stds, dtype=torch.float32)  
+        x_means_tensor = torch.cat([state_means_tensor, act_means_tensor], dim=-1)
+        x_stds_tensor = torch.cat([state_stds_tensor, act_stds_tensor], dim=-1)
+        x_training = (x_training - x_means_tensor)/x_stds_tensor
 
-        #need to check normalisation, what exactly do they normalise?
+        #y:
+        statediff_means_tensor = torch.as_tensor(statediff_means, dtype=torch.float32)
+        statediff_stds_tensor = torch.as_tensor(statediff_stds, dtype=torch.float32)
+        y_training = ((next_obs_tensor - obs_tensor) - statediff_means)/statediff_stds
 
         #could add gaussian noise to x_training & y_training here:
     
@@ -175,15 +205,16 @@ for loop_i in range(train_params.aggregation_iterations):
         #get current state: already in variable: observation
 
         #run MPC loop to get A(s)
-        A = CEM_loop(observation, statediff_means, statediff_stds)
+        initial_state = observation
+        A = CEM_loop(model_list, initial_state, statediff_means_tensor, statediff_stds_tensor, x_means_tensor, x_stds_tensor)
 
         #execute first action
-        action = A[:,0]
+        action = A[0,:]
         next_observation, reward, terminated, truncated, info = env.step(action)
 
         #aggregate transition to D_RL: use Transition batch setup?
         D_RL.add(obs=observation, action=action, next_obs=next_observation, reward=reward, terminated=terminated, truncated=truncated)
-
+        D_combined.add(obs=observation, action=action, next_obs=next_observation, reward=reward, terminated=terminated, truncated=truncated)
 
         #for next loop
         if terminated or truncated:
