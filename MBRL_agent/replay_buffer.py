@@ -201,7 +201,6 @@ class ReplayBuffer:
             reward=self.reward[: self.num_stored],
             terminated=self.terminated[: self.num_stored],
             truncated=self.truncated[: self.num_stored],
-            trajectory_indices=self.trajectory_indices or [],
         )
 
     def load(self, load_dir: Union[pathlib.Path, str]):

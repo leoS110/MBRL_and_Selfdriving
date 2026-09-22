@@ -152,7 +152,7 @@ for loop_i in range(train_params.aggregation_iterations):
             #y:
             statediff_means_tensor = torch.as_tensor(statediff_means, dtype=torch.float32)
             statediff_stds_tensor = torch.as_tensor(statediff_stds, dtype=torch.float32)
-            y_training = ((next_obs_tensor - obs_tensor) - statediff_means)/statediff_stds
+            y_training = ((next_obs_tensor - obs_tensor) - statediff_means_tensor)/statediff_stds_tensor
 
             #could add gaussian noise to x_training & y_training here:
 

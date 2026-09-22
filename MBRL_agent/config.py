@@ -27,6 +27,7 @@ class TrainConfig:
     #really not sure, check: 
     CEM_loopn: int = 30 
     CEM_elitespicked: int = 100
+    CEM_min_std: float = 1e-4
 
     D_RAND_capacity: int = 1_000_000  #(just set to be large enough to never replace)
     D_RL_capacity: int = 1_000_000
