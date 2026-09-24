@@ -79,14 +79,23 @@ def expected_MPC_reward(model_list, initial_state, A, statediff_means_tensor, st
                 new_state = state + delta_state
 
             #calculate reward 
-            reward_val += step_reward_eval(new_state)
+            reward_val += step_reward_eval(new_state, action) #new state and action that caused it is r(s', a): intuitively matches an action being good to cause more velocity otherwise action is unrelated. 
             state = new_state
     
     reward_val *= 1/train_params.ensemble_size
 
     return reward_val
 
-def step_reward_eval(state):
+def step_reward_eval(state, action): #pytorch tensors
     #environment dependant: define once demonstration env is decided
+
+    #small modification from standard half-cheetah: can't do lookahead to find discrete delta_x into the future (or at least don't want to use learnt model to do that)
+    #instead using the instantaneous value and hoping MPC does enough lookahead
+
+    #assuming state (1, 17)
+    dx_dt_tip = state[0,8]
+    squared_l2_action = action.pow(2).sum(dim=-1)
+
+    reward_val = train_params.forward_reward_weight * dx_dt_tip - train_params.ctrl_cost_weight * squared_l2_action
 
     return reward_val

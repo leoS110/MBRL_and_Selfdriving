@@ -5,18 +5,25 @@ import torch
 
 @dataclass                                   
 class TrainConfig:
-    #environment specific paramaters: (env specific)
-    dimension_o: int = 1                                
-    dimension_a: int = 2 
-    a_min: float = 0.0
+    #environment specific paramaters: (env specific: half-cheetah)
+    dimension_o: int = 17  #17 default, 18 if x is included in state vector, see below                    
+    dimension_a: int = 6
+    a_min: float = -1.0
     a_max: float = 1.0
+    forward_reward_weight: float = 1.0 #default 1
+    ctrl_cost_weight: float = 0.1 #default 0.1
+    reset_noise_scale: float = 0.1 #default 0.1
+    exclude_current_positions_from_observation: bool = False #default false
+    frame_skip: int = 5 #default 5
+    frametime: float = 0.01 #default 0.01
 
-    aggregation_iterations: int = 5
 
     #algorithm parameters:
+    aggregation_iterations: int = 5
     SGD_batch_size: int = 512 
     Drand_proportion: float = 0.1
     Drl_proportion: float = 0.9
+    
     MPC_horizon: int = 10 
     CEM_trajn: int = 1000
     SGD_steps: int = 60

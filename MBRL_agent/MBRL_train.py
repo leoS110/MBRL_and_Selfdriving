@@ -18,7 +18,15 @@ from MPC import CEM_loop
 train_params = TrainConfig()
 
 #setup env:
-env = gym.make('HalfCheetah-v5') #cpst weight defaults in 
+env = gym.make(
+    'HalfCheetah-v5',
+    forward_reward_weight=train_params.forward_reward_weight,
+    ctrl_cost_weight=train_params.ctrl_cost_weight,
+    reset_noise_scale=train_params.reset_noise_scale,
+    exclude_current_positions_from_observation=train_params.exclude_current_positions_from_observation,
+    frame_skip=train_params.frame_skip,
+    frametime=train_params.frametime
+)
 observation, info = env.reset()
 
 
@@ -101,8 +109,6 @@ for rand_traj_i in range(train_params.rand_traj_n):
 
         observation, info = env.reset()
     
-
-
 observation, info = env.reset()
 
 #aggregation and training loop

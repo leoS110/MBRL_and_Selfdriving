@@ -5,6 +5,8 @@ highway-env==1.12.1
 moviepy>=2.0
 tensorboard==2.21.0
 rich==15.0.0
+gymnasium[mujoco]
 
 # to open venv: C:\venvs\mbrl_highway_venv\Scripts\Activate.ps1
 # to check installations run 'pip list'
+# currently running on python 3.14, could cause some issues
