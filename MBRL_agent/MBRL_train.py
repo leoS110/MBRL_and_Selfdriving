@@ -28,7 +28,7 @@ env = gym.make(
     reset_noise_scale=train_params.reset_noise_scale,
     exclude_current_positions_from_observation=train_params.exclude_current_positions_from_observation,
     frame_skip=train_params.frame_skip,
-    render_mode = train_params.render_mode,
+    #render_mode = train_params.render_mode,
     #frametime=train_params.frametime
 )
 observation, info = env.reset()
@@ -102,6 +102,7 @@ n_rand = train_params.rand_traj_n * train_params.rand_traj_length #total number 
 rand_rewards = [] #for logging
 
 with tqdm(total=n_rand, desc="Random data", unit="step") as pbar:
+
     for rand_traj_i in range(train_params.rand_traj_n):
             
             for step_i in range(train_params.rand_traj_length):
@@ -232,9 +233,10 @@ for loop_i in aggregation_bar: #equivalent to range(train_params.aggregation_ite
 
         #execute first action
         action = A[0,:]
+        action = action.numpy() #back to numpy for env
         next_observation, reward, terminated, truncated, info = env.step(action)
 
-        #aggregate transition to D_RL: use Transition batch setup?
+        #aggregate transition to D_RL (in numpy)
         D_RL.add(obs=observation, action=action, next_obs=next_observation, reward=reward, terminated=terminated, truncated=truncated)
         D_combined.add(obs=observation, action=action, next_obs=next_observation, reward=reward, terminated=terminated, truncated=truncated)
 

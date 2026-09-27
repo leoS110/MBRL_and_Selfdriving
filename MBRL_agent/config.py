@@ -26,15 +26,15 @@ class TrainConfig:
     Drl_proportion: float = 0.9
     
     MPC_horizon: int = 10 
-    CEM_trajn: int = 1000
+    CEM_trajn: int = 10 #1000 in paper?
     SGD_steps: int = 60
-    rollouts_per_aggregation: int = 400
+    rollouts_per_aggregation: int = 10 #400 in paper?
 
     ensemble_size: int = 5
 
     #really not sure, check: 
     CEM_loopn: int = 30 
-    CEM_elitespicked: int = 100
+    CEM_elitespicked: int = 5
     CEM_min_std: float = 1e-4
 
     D_RAND_capacity: int = 1_000_000  #(just set to be large enough to never replace)
@@ -61,5 +61,5 @@ class TransitionConfig:
     lr: float = 1e-3                                            
                 
     #devide allocation:
-    device: torch.device = torch.device("cpu") #or "cuda"
+    device: torch.device = torch.device("cuda") #or "cuda"
     seed: int = 0 
