@@ -13,9 +13,10 @@ class TrainConfig:
     forward_reward_weight: float = 1.0 #default 1
     ctrl_cost_weight: float = 0.1 #default 0.1
     reset_noise_scale: float = 0.1 #default 0.1
-    exclude_current_positions_from_observation: bool = False #default false
+    exclude_current_positions_from_observation: bool = True #default true
     frame_skip: int = 5 #default 5
     frametime: float = 0.01 #default 0.01
+    render_mode: str = "None"
 
 
     #algorithm parameters:
@@ -41,7 +42,7 @@ class TrainConfig:
 
     #random trajectory parameters: (fully eyeballed values)
     rand_traj_length: int = 200
-    rand_traj_n: int = 100
+    rand_traj_n: int = 200
 
 
 #NN paramaters
@@ -49,8 +50,8 @@ class TrainConfig:
 class TransitionConfig:
 
     #input and output data: (env specific)
-    dimension_in: int = 3                             
-    dimension_out: int = 2
+    dimension_in: int = 23                           
+    dimension_out: int = 17
 
     #NN parameters:   #check paper what they used                           
     n_width: int = 50                       

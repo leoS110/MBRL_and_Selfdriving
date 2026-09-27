@@ -1,6 +1,7 @@
 #CEM
 #(using state and observation interchangably, assuming fully observed / no representation learning)
 from config import TrainConfig
+import random
 
 import replay_buffer
 import numpy as np
@@ -12,13 +13,11 @@ from transition_model import get_state_dif
 train_params = TrainConfig()
 
 
-def CEM_loop(model_list, initial_state, statediff_means_tensor, statediff_stds_tensor, x_means_tensor, x_stds_tensor):
+def CEM_loop(model_list, initial_state_tensor, statediff_means_tensor, statediff_stds_tensor, x_means_tensor, x_stds_tensor):
 
     #initialise A distribution p(A): (https://docs.pytorch.org/docs/2.14/distributions.html#multivariatenormal)
     A_distribution = MultivariateNormal(torch.zeros(train_params.MPC_horizon*train_params.dimension_a), torch.eye(train_params.MPC_horizon*train_params.dimension_a))
     #whole action sequence in one flat vector
-
-    initial_state_tensor = torch.as_tensor(initial_state, dtype=torch.float32)
 
     #trajectory_store = np.empty(train_params.MPC_horizon*train_params.dimension_a, train_params.CEM_trajn)
     
@@ -39,10 +38,10 @@ def CEM_loop(model_list, initial_state, statediff_means_tensor, statediff_stds_t
 
             reward_val = expected_MPC_reward(model_list, initial_state_tensor, A_i, statediff_means_tensor, statediff_stds_tensor, x_means_tensor, x_stds_tensor)
 
-            reward_store[1, sampled_traj_i] = reward_val
+            reward_store[0, sampled_traj_i] = reward_val
 
         #pick elites 
-        top_n_indices = np.argsort(-reward_store)[:train_params.CEM_elitespicked] #negates, sorts, and slices the first terms
+        top_n_indices = np.argsort(-reward_store[0,:])[:train_params.CEM_elitespicked] #negates, sorts, and slices the first terms
         samples_elites = samples_arrangedandbounded[top_n_indices, :, :] #not sure about indexing here
 
         #refit p(A) to elites: define a new multivariate normal based off of elite action paths, tensors
@@ -66,21 +65,23 @@ def expected_MPC_reward(model_list, initial_state, A, statediff_means_tensor, st
     
     #curious about potential to alter reward to penalise model disagreement 
 
-    for model in model_list: #sample based expectation under model parameter uncertainty
+    #for model in model_list: #sample based expectation under model parameter uncertainty, or just pick a random one out of model list?
+    model = random.choice(model_list)
 
-        reward_val = 0.0
-        state = initial_state
+    reward_val = 0.0
+    state = initial_state
 
-        for step_i in range(train_params.MPC_horizon):
-            #take open loop action, change of state stepped through learnt model
-            action = A[step_i,:]
-            with torch.no_grad():
-                delta_state = get_state_dif(model, state, action, statediff_means_tensor, statediff_stds_tensor, x_means_tensor, x_stds_tensor) #assuming de-normalised by this point
-                new_state = state + delta_state
+    for step_i in range(train_params.MPC_horizon):
+        #take open loop action, change of state stepped through learnt model
+        action = A[step_i,:]
+        action = action.unsqueeze(0) #make action (1, n_a) size
+        with torch.no_grad():
+            delta_state = get_state_dif(model, state, action, statediff_means_tensor, statediff_stds_tensor, x_means_tensor, x_stds_tensor) #assuming de-normalised by this point
+            new_state = state + delta_state
 
-            #calculate reward 
-            reward_val += step_reward_eval(new_state, action) #new state and action that caused it is r(s', a): intuitively matches an action being good to cause more velocity otherwise action is unrelated. 
-            state = new_state
+        #calculate reward 
+        reward_val += step_reward_eval(new_state, action) #new state and action that caused it is r(s', a): intuitively matches an action being good to cause more velocity otherwise action is unrelated. 
+        state = new_state
     
     reward_val *= 1/train_params.ensemble_size
 

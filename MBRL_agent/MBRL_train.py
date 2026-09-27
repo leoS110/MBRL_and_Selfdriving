@@ -5,6 +5,9 @@ import torch
 import torch.nn as nn
 from dataclasses import dataclass, field 
 import gymnasium as gym 
+from tqdm import tqdm #for terminal progress bar
+import time
+from stable_baselines3.common.logger import configure #for logging
 
 #import definitions
 
@@ -25,7 +28,8 @@ env = gym.make(
     reset_noise_scale=train_params.reset_noise_scale,
     exclude_current_positions_from_observation=train_params.exclude_current_positions_from_observation,
     frame_skip=train_params.frame_skip,
-    frametime=train_params.frametime
+    render_mode = train_params.render_mode,
+    #frametime=train_params.frametime
 )
 observation, info = env.reset()
 
@@ -88,47 +92,70 @@ for i in range(train_params.ensemble_size):
 
 loss_fn = nn.MSELoss()   
 
+#setup log:
+logger = configure("mbrl_runs/cheetah", ["stdout", "csv", "tensorboard"])
+total_env_steps = 0
+
 #Gather set of random trajectories and add to dedicated reply buffer (+ combined replay buffer):
 rng = np.random.default_rng()
+n_rand = train_params.rand_traj_n * train_params.rand_traj_length #total number of random env steps, for logging & progress bar
+rand_rewards = [] #for logging
 
-for rand_traj_i in range(train_params.rand_traj_n):
-        
-        for step_i in range(train_params.rand_traj_length):
+with tqdm(total=n_rand, desc="Random data", unit="step") as pbar:
+    for rand_traj_i in range(train_params.rand_traj_n):
+            
+            for step_i in range(train_params.rand_traj_length):
 
-            action = rng.uniform(train_params.a_min, train_params.a_max, size=(1, train_params.dimension_a))
+                action = rng.uniform(train_params.a_min, train_params.a_max, size=(1, train_params.dimension_a))
 
-            next_observation, reward, terminated, truncated, info = env.step(action)
+                action_squeezed = action.squeeze()
+                next_observation, reward, terminated, truncated, info = env.step(action_squeezed)
 
-            D_RAND.add(obs=observation, action=action, next_obs=next_observation, reward=reward, terminated=terminated, truncated=truncated)
-            D_combined.add(obs=observation, action=action, next_obs=next_observation, reward=reward, terminated=terminated, truncated=truncated)
+                D_RAND.add(obs=observation, action=action, next_obs=next_observation, reward=reward, terminated=terminated, truncated=truncated)
+                D_combined.add(obs=observation, action=action, next_obs=next_observation, reward=reward, terminated=terminated, truncated=truncated)
 
-            if terminated or truncated:
-                observation, info = env.reset()
-            else:
-                observation = next_observation
+                if terminated or truncated:
+                    observation, info = env.reset()
+                else:
+                    observation = next_observation
 
-        observation, info = env.reset()
-    
+                #for logging & pbar:
+                rand_rewards.append(reward)
+                pbar.update(1)
+
+            observation, info = env.reset()
+
+#for logging:
+total_env_steps += n_rand
+logger.record("baseline/random_step_reward", float(np.mean(rand_rewards)))   
+
 observation, info = env.reset()
 
-#aggregation and training loop
-for loop_i in range(train_params.aggregation_iterations):
+#aggregation and training loop:
+aggregation_bar = tqdm(range(train_params.aggregation_iterations), desc="Aggregation", position=0, unit="iter") #for pbar
+
+for loop_i in aggregation_bar: #equivalent to range(train_params.aggregation_iterations), just changed to allow for progress bar
+    t_iter = time.perf_counter() #for pbar
 
     #get normalisation stats:
     statediff_means, statediff_stds, state_means, state_stds, act_means, act_stds = D_combined.get_statistics()
 
     #train transition model on buffer
-    for optimisation_i in range(train_params.SGD_steps):
+    #pbar:
+    train_bar = tqdm(range(train_params.SGD_steps), desc="  Train ensemble", position=1, leave=False, unit="step")
+    for optimisation_i in train_bar: #range(train_params.SGD_steps)
         
         #can evaluate loss for loss curve here
-    
-        for model_i in range(train_params.ensemble_size):
 
+        step_losses = [] #for logging, stores one loss value per model
+
+        for model_i in range(train_params.ensemble_size):
+            
             model = model_list[model_i]
             optimiser = optimiser_list[model_i]
 
             optimiser.zero_grad(set_to_none=True) #zero the gradients from the last step so that they don't accumulate
-
+            
             #sampling a training data batch, different one for each model
             D_training = sample_mixed(D_RAND, D_RL, train_params.SGD_batch_size, train_params.Drl_proportion)
             #normalise training data with mean and standard deviation:
@@ -162,26 +189,46 @@ for loop_i in range(train_params.aggregation_iterations):
 
             #could add gaussian noise to x_training & y_training here:
 
+            #debugging:
+            #print(f"x_training shape: {x_training.shape}")
+            #print(f"y_training shape: {y_training.shape}")
 
             #h(x), forward pass, autograd caching
-            model_vals = model(x_training)  #CHECK X FORMAT HERE
+            model_vals = model(x_training)  
         
             #evaluate loss on batch
             loss = loss_fn(model_vals, y_training) 
+
+            #for logging:
+            step_losses.append(loss.item()) 
         
             #uses backprop + autograd to generate loss gradients (fills .grad graph)
             loss.backward()
             optimiser.step() 
+
+        mean_loss = float(np.mean(step_losses)) #for logging, mean across models
+        if optimisation_i == 0:
+            logger.record("train/loss_first", mean_loss)
+        if optimisation_i % 25 == 0:
+            train_bar.set_postfix(loss=f"{mean_loss:.4f}")
+
+    logger.record("train/loss_last", mean_loss) #at the end of training, mean loss across models, for comparison against loss_first
+
+    #MPC rollout progress bar
+    MPC_rollout_bar = tqdm(range(train_params.rollouts_per_aggregation), desc="  MPC rollout", position=1, leave=False, unit="step")
     
-    for rollout_i in range(train_params.rollouts_per_aggregation):
+    for rollout_i in MPC_rollout_bar: #range(train_params.rollouts_per_aggregation)
+        t0 = time.perf_counter()
 
         #MPC logic:
 
         #get current state: already in variable: observation
 
         #run MPC loop to get A(s)
-        initial_state = observation
-        A = CEM_loop(model_list, initial_state, statediff_means_tensor, statediff_stds_tensor, x_means_tensor, x_stds_tensor)
+        observation = observation.reshape(1, train_params.dimension_o) #make the right shape
+        observation = torch.as_tensor(observation, dtype=torch.float32)
+        initial_state_tensor = observation
+        A = CEM_loop(model_list, initial_state_tensor, statediff_means_tensor, statediff_stds_tensor, x_means_tensor, x_stds_tensor)
 
         #execute first action
         action = A[0,:]
@@ -198,7 +245,7 @@ for loop_i in range(train_params.aggregation_iterations):
             observation = next_observation
 
 
-        
+#save logs:      
 
 
 
