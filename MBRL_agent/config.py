@@ -22,12 +22,12 @@ class TrainConfig:
 
 
     #algorithm parameters:
-    aggregation_iterations: int = 20 #7 in paper
+    aggregation_iterations: int = 12 #7 in paper
     SGD_batch_size: int = 512 #512 in paper, i think 
     Drand_proportion: float = 0.3 #0.1 in paper
     Drl_proportion: float = 0.7 #0.9 in paper
     
-    MPC_horizon: int = 10 #5 in paper: 0.2s with frame_skip = 5, *0.05 to get corresponding in s
+    MPC_horizon: int = 10 #10 in paper: 0.2s with frame_skip = 5, *0.05 to get corresponding in s
     CEM_trajn: int = 200 #1000 in paper, but this is for random shooting
     SGD_steps: int = 4000 #not sure,plateaus at 800 on random steps, but later 800 doesn't impact much. Careful not to pull repeated points, check this
     rollout_steps_steps_per_aggregation: int = 9000 #9 full loops of 1000 steps before truncation: 9000 in paper
@@ -64,8 +64,8 @@ class TransitionConfig:
     dimension_out: int = 17
 
     #NN parameters:   #check paper what they used, 4x200 in PETS?                           
-    n_width: int = 150                       
-    n_layers: int = 3 #hidden layers, not including output
+    n_width: int = 200                       
+    n_layers: int = 4 #hidden layers, not including output
 
     #optimisation parameters:
     lr: float = 1e-3                                            
