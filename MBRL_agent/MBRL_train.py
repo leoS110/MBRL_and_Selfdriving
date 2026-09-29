@@ -3,6 +3,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.optim as optim
 from dataclasses import dataclass, field 
 import gymnasium as gym 
 from tqdm import tqdm #for terminal progress bar
@@ -31,6 +32,25 @@ env = gym.make(
     #render_mode = train_params.render_mode,
     #frametime=train_params.frametime
 )
+rendered_env = gym.make(
+    'HalfCheetah-v5',
+    forward_reward_weight=train_params.forward_reward_weight,
+    ctrl_cost_weight=train_params.ctrl_cost_weight,
+    reset_noise_scale=train_params.reset_noise_scale,
+    exclude_current_positions_from_observation=train_params.exclude_current_positions_from_observation,
+    frame_skip=train_params.frame_skip,
+    render_mode = "human",
+    #frametime=train_params.frametime
+)
+
+video_env = gym.wrappers.RecordVideo(
+    gym.make('HalfCheetah-v5', forward_reward_weight=train_params.forward_reward_weight, ctrl_cost_weight=train_params.ctrl_cost_weight, reset_noise_scale=train_params.reset_noise_scale, exclude_current_positions_from_observation=train_params.exclude_current_positions_from_observation, frame_skip=train_params.frame_skip, render_mode="rgb_array"),
+    video_folder="mbrl_runs/cheetah/videos",
+    episode_trigger=lambda ep: True,        # each window starts with a reset, so each window = one clip
+    video_length=train_params.render_length,
+    name_prefix="mpc",
+)
+
 observation, info = env.reset()
 
 
@@ -85,7 +105,8 @@ nn_params = TransitionConfig()
 for i in range(train_params.ensemble_size):
 
     transition_model = pytorchNN(nn_params.dimension_in, nn_params.dimension_out, nn_params.n_width, nn_params.n_layers)
-    optimiser = torch.optim.SGD(transition_model.parameters(), lr=nn_params.lr) 
+    #optimiser = torch.optim.SGD(transition_model.parameters(), lr=nn_params.lr)
+    optimiser = optim.Adam(transition_model.parameters(), lr=nn_params.lr)
 
     model_list.append(transition_model)
     optimiser_list.append(optimiser)
@@ -183,6 +204,7 @@ for loop_i in aggregation_bar: #equivalent to range(train_params.aggregation_ite
             x_stds_tensor = torch.cat([state_stds_tensor, act_stds_tensor], dim=-1)
             x_training = (x_training - x_means_tensor)/x_stds_tensor
 
+
             #y:
             statediff_means_tensor = torch.as_tensor(statediff_means, dtype=torch.float32)
             statediff_stds_tensor = torch.as_tensor(statediff_stds, dtype=torch.float32)
@@ -193,6 +215,8 @@ for loop_i in aggregation_bar: #equivalent to range(train_params.aggregation_ite
             #debugging:
             #print(f"x_training shape: {x_training.shape}")
             #print(f"y_training shape: {y_training.shape}")
+            #print("x_training, x_means_tensor, x_stds_tensor sizes: ", x_training.size(), x_means_tensor.size(), x_stds_tensor.size())
+            #print("y_training, (next_obs_tensor - obs_tensor), statediff_means_tensor, statediff_stds_tensor: ", y_training.size(), (next_obs_tensor - obs_tensor).size(), statediff_means_tensor.size(), statediff_stds_tensor.size())
 
             #h(x), forward pass, autograd caching
             model_vals = model(x_training)  
@@ -215,15 +239,28 @@ for loop_i in aggregation_bar: #equivalent to range(train_params.aggregation_ite
 
     logger.record("train/loss_last", mean_loss) #at the end of training, mean loss across models, for comparison against loss_first
 
-    #MPC rollout progress bar
-    MPC_rollout_bar = tqdm(range(train_params.rollouts_per_aggregation), desc="  MPC rollout", position=1, leave=False, unit="step")
+    #MPC rollout progress bar & logs
+    MPC_rollout_bar = tqdm(range(train_params.rollout_steps_per_aggregation), desc="  MPC rollout", position=1, leave=False, unit="step")
+    mean_step_reward = 0.0
+    env_rollout_steps = 0.0
+
+    active_env = env 
     
-    for rollout_i in MPC_rollout_bar: #range(train_params.rollouts_per_aggregation)
+    for step_i in MPC_rollout_bar: #range(train_params.rollout_steps_per_aggregation), this is just total steps, not trajectories
         t0 = time.perf_counter()
 
         #MPC logic:
 
         #get current state: already in variable: observation
+
+        #logic to render every train_params.render_period for a length of render_steps env steps
+        phase = step_i % train_params.render_period
+        if phase == 0: #window opens
+            active_env = video_env
+            observation, info = active_env.reset()
+        elif phase == train_params.render_length: #window closes
+            active_env = env
+            observation, info = active_env.reset()
 
         #run MPC loop to get A(s)
         observation = observation.reshape(1, train_params.dimension_o) #make the right shape
@@ -231,10 +268,16 @@ for loop_i in aggregation_bar: #equivalent to range(train_params.aggregation_ite
         initial_state_tensor = observation
         A = CEM_loop(model_list, initial_state_tensor, statediff_means_tensor, statediff_stds_tensor, x_means_tensor, x_stds_tensor)
 
-        #execute first action
+        #execute first action in A
         action = A[0,:]
         action = action.numpy() #back to numpy for env
-        next_observation, reward, terminated, truncated, info = env.step(action)
+
+        next_observation, reward, terminated, truncated, info = active_env.step(action)
+
+        #for logging: 
+        mean_step_reward += reward
+        env_rollout_steps += 1
+        total_env_steps += 1
 
         #aggregate transition to D_RL (in numpy)
         D_RL.add(obs=observation, action=action, next_obs=next_observation, reward=reward, terminated=terminated, truncated=truncated)
@@ -242,14 +285,23 @@ for loop_i in aggregation_bar: #equivalent to range(train_params.aggregation_ite
 
         #for next loop
         if terminated or truncated:
-            observation, info = env.reset()
+            observation, info = active_env.reset()
         else:
             observation = next_observation
 
+    mean_step_reward = mean_step_reward / env_rollout_steps
+    logger.record("time/iteration", loop_i)
+    logger.record("time/total_env_steps", total_env_steps)
+    logger.record("time/iter_s", time.perf_counter() - t_iter)
+    logger.record("data/D_RAND", D_RAND.num_stored)
+    logger.record("data/D_RL", D_RL.num_stored)
+    logger.record("rollout/mean_step_reward", mean_step_reward)
+    logger.dump(step=total_env_steps)
+    
 
 #save logs:      
 
-
+logger.close()
 
 #save replay buffers:
 

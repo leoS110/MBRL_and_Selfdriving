@@ -7,7 +7,7 @@ from config import TransitionConfig
 
 nn_params = TransitionConfig()
 
-#Define NN: forward pass, loss, optimizer 
+#Define NN: forward pass
 class pytorchNN(nn.Module):                             
     def __init__(self, dimension_in, dimension_out, n_width, n_layers, act=nn.ReLU):   
         super().__init__()                        # must run first: creates the parameter/module registries
@@ -28,7 +28,7 @@ class pytorchNN(nn.Module):
 #should this be part of the class?
 def get_state_dif(model, state, action,  statediff_means_tensor, statediff_stds_tensor, x_means_tensor, x_stds_tensor):
 
-    #need to transfer state & action to tensors?
+    #everything in pytorch tensors
 
     #normalise model input
     x_val = torch.cat([state, action], dim=-1) #maybe should check dimensions of state & action

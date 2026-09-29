@@ -112,4 +112,7 @@ def step_reward_eval(state, action): #pytorch tensors
 
     reward_val = train_params.forward_reward_weight * dx_dt_tip - train_params.ctrl_cost_weight * squared_l2_action
 
+    #could penalise model disagreement?
+    #could penalise movement in z of the front tip? state[0,9]
+
     return reward_val
