@@ -36,14 +36,17 @@ def CEM_loop(model_list, initial_state_tensor, statediff_means_tensor, statediff
         #print("A sample reshaped, size: ", samples_arrangedandbounded.size())                 
 
         #Evaluate reward associated to each trajectory J(A), loop through samples
-        for sampled_traj_i in range(train_params.CEM_trajn):
+        #for sampled_traj_i in range(train_params.CEM_trajn):
 
-            A_i = samples_arrangedandbounded[sampled_traj_i, :, :]
+        #    A_i = samples_arrangedandbounded[sampled_traj_i, :, :]
             #print("individual A_i for rollout, size: ", A_i.size())
             
-            reward_val = expected_MPC_reward(model_list, initial_state_tensor, A_i, statediff_means_tensor, statediff_stds_tensor, x_means_tensor, x_stds_tensor)
+        #    reward_val = expected_MPC_reward(model_list, initial_state_tensor, A_i, statediff_means_tensor, statediff_stds_tensor, x_means_tensor, x_stds_tensor)
 
-            reward_store[0, sampled_traj_i] = reward_val
+        #    reward_store[0, sampled_traj_i] = reward_val
+
+        #new vectorised implementation, leading row for all trajectories, use pytorch handling of rows independantly to evaluate with one pass
+        reward_store[0, :] = expected_MPC_reward(model_list, initial_state_tensor, samples_arrangedandbounded, statediff_means_tensor, statediff_stds_tensor, x_means_tensor, x_stds_tensor)
 
         #pick elites 
         top_n_indices = np.argsort(-reward_store[0,:])[:train_params.CEM_elitespicked] #negates, sorts, and slices the first terms
@@ -77,17 +80,19 @@ def CEM_loop(model_list, initial_state_tensor, statediff_means_tensor, statediff
 def expected_MPC_reward(model_list, initial_state, A, statediff_means_tensor, statediff_stds_tensor, x_means_tensor, x_stds_tensor): 
     
     #curious about potential to alter reward to penalise model disagreement 
-    #model = random.choice(model_list)
+    model = random.choice(model_list)
     reward_val = 0.0
 
     for model in model_list: #sample based expectation under model parameter uncertainty, or just pick a random one out of model list?
     
-        state = initial_state
+        #state = initial_state
+        state = initial_state.expand(A.shape[0], -1) #(traj_n, n_o), one row for each traj
+
 
         for step_i in range(train_params.MPC_horizon):
             #take open loop action, change of state stepped through learnt model
-            action = A[step_i,:]
-            action = action.unsqueeze(0) #make action (1, n_a) size
+            action = A[:, step_i,:] #now (traj_n, n_a)
+            #action = action.unsqueeze(0) #make action (1, n_a) size
             with torch.no_grad():
                 delta_state = get_state_dif(model, state, action, statediff_means_tensor, statediff_stds_tensor, x_means_tensor, x_stds_tensor) #assuming de-normalised by this point
                 new_state = state + delta_state
@@ -107,10 +112,10 @@ def step_reward_eval(state, action): #pytorch tensors
     #instead using the instantaneous value and hoping MPC does enough lookahead
 
     #assuming state (1, 17)
-    dx_dt_tip = state[0,8]
+    dx_dt_tip = state[:,8]
     squared_l2_action = action.pow(2).sum(dim=-1)
-    dz_dt_tip = state[0,9]
-    dtheta_dt_tip = state[0,10]
+    dz_dt_tip = state[:,9]
+    dtheta_dt_tip = state[:,10]
 
     #reward_val = train_params.forward_reward_weight * dx_dt_tip - train_params.ctrl_cost_weight * squared_l2_action
     reward_val = train_params.forward_reward_weight * dx_dt_tip - train_params.ctrl_cost_weight * squared_l2_action - train_params.tip_cost_weight * dtheta_dt_tip

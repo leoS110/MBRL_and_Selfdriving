@@ -18,34 +18,38 @@ class TrainConfig:
     frametime: float = 0.01 #default 0.01
     render_mode: str = "None"
 
+    tip_cost_weight: float = 0.1 #manually addition to penalise flip in predictions
+
 
     #algorithm parameters:
     aggregation_iterations: int = 20 #7 in paper
     SGD_batch_size: int = 512 #512 in paper, i think 
-    Drand_proportion: float = 0.1 #0.1 in paper
-    Drl_proportion: float = 0.9 #0.9 in paper
+    Drand_proportion: float = 0.3 #0.1 in paper
+    Drl_proportion: float = 0.7 #0.9 in paper
     
-    MPC_horizon: int = 12 #5 in paper: 0.2s with frame_skip = 5, *0.05 to get corresponding in s
-    CEM_trajn: int = 150 #1000 in paper, but this is for random shooting
-    SGD_steps: int = 4000 #not sure,plateaus at 800 on random steps, but later 800 doesn't impact much
-    rollout_steps_per_aggregation: int = 1000 #9 full loops of 1000 steps before truncation: 9000 in paper
+    MPC_horizon: int = 10 #5 in paper: 0.2s with frame_skip = 5, *0.05 to get corresponding in s
+    CEM_trajn: int = 175 #1000 in paper, but this is for random shooting
+    SGD_steps: int = 3000 #not sure,plateaus at 800 on random steps, but later 800 doesn't impact much. Careful not to pull repeated points, check this
+    rollout_steps_steps_per_aggregation: int = 9000 #9 full loops of 1000 steps before truncation: 9000 in paper
+    MPC_actions_per_A: int = 1
 
     ensemble_size: int = 5 #no idea
 
     #really not sure, check: 
     CEM_loopn: int = 5 #5 is standard 
-    CEM_elitespicked: int = 10
-    CEM_min_std: float = 0.03
+    CEM_elitespicked: int = 10 #not sure
+    MPC_variance_init: float = 0.5 #notsure
+    CEM_min_variance: float = 0.01 #mot sure
 
     D_RAND_capacity: int = 2_000_000  #(just set to be large enough to never replace)
     D_RL_capacity: int = 1_000_000
 
     #random trajectory parameters: (fully eyeballed values)
     rand_traj_length: int = 500
-    rand_traj_n: int = 500 #10 in paper
+    rand_traj_n: int = 50 #10 in paper
 
     #for in window rendering
-    render_period: float = 300
+    render_period: float = 300 #300 env steps, dt * frame_skip * render_period = 0.01 * 5 * 300?
     render_length: float = 100
     #for video saving mid training:
 
