@@ -1,4 +1,7 @@
 #CEM
+
+#edit reward function to change planning
+
 #(using state and observation interchangably, assuming fully observed / no representation learning)
 from config_train import TrainConfig
 import random
@@ -111,16 +114,32 @@ def step_reward_eval(state, action): #pytorch tensors
     #small modification from standard half-cheetah: can't do lookahead to find discrete delta_x into the future (or at least don't want to use learnt model to do that)
     #instead using the instantaneous value and hoping MPC does enough lookahead
 
+    #running forward as fast as possible:
     #assuming state (1, 17)
-    dx_dt_tip = state[:,8]
+    dx_dt_tip = -state[:,8]
     squared_l2_action = action.pow(2).sum(dim=-1)
     dz_dt_tip = state[:,9]
     dtheta_dt_tip = state[:,10]
-
     #reward_val = train_params.forward_reward_weight * dx_dt_tip - train_params.ctrl_cost_weight * squared_l2_action
     reward_val = train_params.forward_reward_weight * dx_dt_tip - train_params.ctrl_cost_weight * squared_l2_action - train_params.tip_cost_weight * dtheta_dt_tip
 
     #could penalise model disagreement?
     #could penalise movement in z of the front tip? state[0,9]
+
+    #running backward as fast as possible:
+    #dx_dt_tip = -state[:,8]
+    #squared_l2_action = action.pow(2).sum(dim=-1)
+    #dz_dt_tip = state[:,9]
+    #dtheta_dt_tip = state[:,10]
+    #reward_val = train_params.forward_reward_weight * dx_dt_tip - train_params.ctrl_cost_weight * squared_l2_action
+    #reward_val = train_params.forward_reward_weight * dx_dt_tip - train_params.ctrl_cost_weight * squared_l2_action - train_params.tip_cost_weight * dtheta_dt_tip
+
+    #jump:
+
+
+
+
+
+    #speed tracking:
 
     return reward_val

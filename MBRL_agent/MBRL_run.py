@@ -8,15 +8,16 @@ import gymnasium as gym
 from tqdm import tqdm #for terminal progress bar
 import time
 from stable_baselines3.common.logger import configure #for logging
+from pathlib import Path
 
 #import definitions
 
-from config import TrainConfig, TransitionConfig
+from config_run import TrainConfig, TransitionConfig
 
 from transitionbatch import TransitionBatch 
 from replay_buffer import ReplayBuffer 
 from transition_model import pytorchNN
-from MPC import CEM_loop
+from MPC_run import CEM_loop
 
 train_params = TrainConfig()
 
@@ -33,41 +34,30 @@ env = gym.make(
 )
 observation, info = env.reset()
 
-
-    
-#ensemble models in a list, each with its own optimiser, load: 
-
+#load transition model ensemble: 
 nn_params = TransitionConfig()
-#pytorch should generate independant random seeds automatically
+AGENT_DIR = Path(__file__).resolve().parent 
+saved_checkpoint_path = AGENT_DIR / "models" / "3009ensemble.pt"
+saved_checkpoint = torch.load(saved_checkpoint_path, weights_only=True)
+
+#load model list
+model_list = []
+for sd in saved_checkpoint["state_dicts"]:
+    m = pytorchNN(nn_params.dimension_in, nn_params.dimension_out, nn_params.n_width, nn_params.n_layers)
+    m.load_state_dict(sd)
+    m.eval()
+    model_list.append(m)
+
+#load normalisation stats
+x_means_tensor = saved_checkpoint["x_means_tensor"]
+x_stds_tensor = saved_checkpoint["x_stds_tensor"]
+statediff_means_tensor = saved_checkpoint["statediff_means_tensor"]
+statediff_stds_tensor = saved_checkpoint["statediff_stds_tensor"]
 
 
-#load combined buffer for normalisation statistics:
-
-
-for i in range(train_params.ensemble_size):
-
-    transition_model = pytorchNN(nn_params.dimension_in, nn_params.dimension_out, nn_params.n_width, nn_params.n_layers)
-    optimiser = torch.optim.SGD(transition_model.parameters(), lr=nn_params.lr) 
-
-    model_list.append(transition_model)
-    optimiser_list.append(optimiser)
-
-loss_fn = nn.MSELoss()   
-
-
-
-observation, info = env.reset()
-
-#aggregation and training loop:
-aggregation_bar = tqdm(range(train_params.aggregation_iterations), desc="Aggregation", position=0, unit="iter") #for pbar
-
-
-
-#get normalisation stats:
-statediff_means, statediff_stds, state_means, state_stds, act_means, act_stds = D_combined.get_statistics()
 
 #MPC rollout progress bar
-MPC_rollout_bar = tqdm(range(train_params.rollouts_per_aggregation), desc="  MPC rollout", position=1, leave=False, unit="step")
+MPC_rollout_bar = tqdm(range(train_params.rollout_steps_steps_per_aggregation), desc="  MPC rollout", position=1, leave=False, unit="step")
 
 for rollout_i in MPC_rollout_bar: #range(train_params.rollouts_per_aggregation)
     t0 = time.perf_counter()
@@ -86,9 +76,6 @@ for rollout_i in MPC_rollout_bar: #range(train_params.rollouts_per_aggregation)
     action = A[0,:]
     action = action.numpy() #back to numpy for env
     next_observation, reward, terminated, truncated, info = env.step(action)
-
-    #aggregate transition to D_RL (in numpy)
-    D_combined.add(obs=observation, action=action, next_obs=next_observation, reward=reward, terminated=terminated, truncated=truncated)
 
     #for next loop
     if terminated or truncated:

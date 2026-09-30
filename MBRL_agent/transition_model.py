@@ -3,7 +3,7 @@ import torch.nn as nn
 from dataclasses import dataclass, field  
 
 #from MBRL_train import train_params #problem
-from config import TransitionConfig
+from config_train import TransitionConfig
 
 nn_params = TransitionConfig()
 

@@ -9,10 +9,13 @@ import gymnasium as gym
 from tqdm import tqdm #for terminal progress bar
 import time
 from stable_baselines3.common.logger import configure #for logging
+import os #for model saving
+import shutil
 
 #import definitions
 
-from config import TrainConfig, TransitionConfig
+from config_train import TrainConfig, TransitionConfig
+import config_train
 
 from transitionbatch import TransitionBatch 
 from replay_buffer import ReplayBuffer 
@@ -31,16 +34,6 @@ env = gym.make(
     exclude_current_positions_from_observation=train_params.exclude_current_positions_from_observation,
     frame_skip=train_params.frame_skip,
     #render_mode = train_params.render_mode,
-    #frametime=train_params.frametime
-)
-rendered_env = gym.make(
-    'HalfCheetah-v5',
-    forward_reward_weight=train_params.forward_reward_weight,
-    ctrl_cost_weight=train_params.ctrl_cost_weight,
-    reset_noise_scale=train_params.reset_noise_scale,
-    exclude_current_positions_from_observation=train_params.exclude_current_positions_from_observation,
-    frame_skip=train_params.frame_skip,
-    render_mode = "human",
     #frametime=train_params.frametime
 )
 
@@ -152,6 +145,12 @@ with tqdm(total=n_rand, desc="Random data", unit="step") as pbar:
 total_env_steps += n_rand
 logger.record("baseline/random_step_reward", float(np.mean(rand_rewards)))   
 
+#for saving the model ensemble, every aggregation loop if it better than the last
+CKPT_DIR = f"mbrl_runs/cheetah/checkpoints/{time.strftime('%Y%m%d-%H%M%S')}"
+os.makedirs(CKPT_DIR, exist_ok=True)
+shutil.copy(config_train.__file__, CKPT_DIR) #make a copy of the training copy for safekeeping
+best_score = -float("inf")
+
 observation, info = env.reset()
 
 #aggregation and training loop:
@@ -255,7 +254,7 @@ for loop_i in aggregation_bar: #equivalent to range(train_params.aggregation_ite
         #get current state: already in variable: observation
 
         #logic to render every train_params.render_period for a length of render_steps env steps
-        phase = step_i % (train_params.render_period // train_params.MPC_actions_per_A)
+        phase = step_i % (train_params.render_period // train_params.MPC_actions_per_A) #might be a bug here
         if phase == 0: #window opens
             active_env = video_env
             observation, info = active_env.reset()
@@ -294,24 +293,33 @@ for loop_i in aggregation_bar: #equivalent to range(train_params.aggregation_ite
                 observation = next_observation
 
     mean_step_reward = mean_step_reward / env_rollout_steps
+
+    #check if ensemble performed better than the last and save if so
+    if mean_step_reward > best_score:
+        best_score = mean_step_reward
+        torch.save({
+            "state_dicts": [m.state_dict() for m in model_list],
+            "x_means_tensor": x_means_tensor,  "x_stds_tensor": x_stds_tensor,
+            "statediff_means_tensor": statediff_means_tensor, "statediff_stds_tensor": statediff_stds_tensor,
+            "loop_i": loop_i, "mean_step_reward": float(mean_step_reward),
+        }, f"{CKPT_DIR}/best.pt")
+    
+    #logging
     logger.record("time/iteration", loop_i)
     logger.record("time/total_env_steps", total_env_steps)
     logger.record("time/iter_s", time.perf_counter() - t_iter)
     logger.record("data/D_RAND", D_RAND.num_stored)
     logger.record("data/D_RL", D_RL.num_stored)
     logger.record("rollout/mean_step_reward", mean_step_reward)
+    logger.record("rollout/best_step_reward", best_score)
     logger.dump(step=total_env_steps)
     
 
-#save logs:      
-
+     
 logger.close()
 
-#save replay buffers:
 
 
-
-#save models:
 
 
 

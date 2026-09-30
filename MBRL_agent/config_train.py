@@ -22,7 +22,7 @@ class TrainConfig:
 
 
     #algorithm parameters:
-    aggregation_iterations: int = 12 #7 in paper
+    aggregation_iterations: int = 15 #7 in paper
     SGD_batch_size: int = 512 #512 in paper, i think 
     Drand_proportion: float = 0.3 #0.1 in paper
     Drl_proportion: float = 0.7 #0.9 in paper
@@ -46,7 +46,7 @@ class TrainConfig:
 
     #random trajectory parameters: (fully eyeballed values)
     rand_traj_length: int = 500
-    rand_traj_n: int = 100 #10 in paper
+    rand_traj_n: int = 200 #10 in paper
 
     #for in window rendering
     render_period: float = 300 #300 env steps, dt * frame_skip * render_period = 0.01 * 5 * 300?
@@ -63,7 +63,7 @@ class TransitionConfig:
     dimension_in: int = 23                           
     dimension_out: int = 17
 
-    #NN parameters:   #check paper what they used, 4x200 in PETS?                           
+    #NN parameters:   #check paper what they used, 4x200 in PETS? 150x3 worked well also                          
     n_width: int = 200                       
     n_layers: int = 4 #hidden layers, not including output
 
