@@ -116,12 +116,12 @@ def step_reward_eval(state, action): #pytorch tensors
 
     #running forward as fast as possible:
     #assuming state (1, 17)
-    dx_dt_tip = -state[:,8]
-    squared_l2_action = action.pow(2).sum(dim=-1)
-    dz_dt_tip = state[:,9]
-    dtheta_dt_tip = state[:,10]
+    #dx_dt_tip = state[:,8]
+    #squared_l2_action = action.pow(2).sum(dim=-1)
+    #dz_dt_tip = state[:,9]
+    #dtheta_dt_tip = state[:,10]
     #reward_val = train_params.forward_reward_weight * dx_dt_tip - train_params.ctrl_cost_weight * squared_l2_action
-    reward_val = train_params.forward_reward_weight * dx_dt_tip - train_params.ctrl_cost_weight * squared_l2_action - train_params.tip_cost_weight * dtheta_dt_tip
+    #reward_val = train_params.forward_reward_weight * dx_dt_tip - train_params.ctrl_cost_weight * squared_l2_action - train_params.tip_cost_weight * dtheta_dt_tip
 
     #could penalise model disagreement?
     #could penalise movement in z of the front tip? state[0,9]
@@ -133,6 +133,15 @@ def step_reward_eval(state, action): #pytorch tensors
     #dtheta_dt_tip = state[:,10]
     #reward_val = train_params.forward_reward_weight * dx_dt_tip - train_params.ctrl_cost_weight * squared_l2_action
     #reward_val = train_params.forward_reward_weight * dx_dt_tip - train_params.ctrl_cost_weight * squared_l2_action - train_params.tip_cost_weight * dtheta_dt_tip
+
+    #running forward with a tracking speed: effectively linear cost for velocity error (Kp)
+    target_vel = 3.5
+    dx_dt_tip = state[:,8]
+    squared_l2_action = action.pow(2).sum(dim=-1)
+    #dz_dt_tip = state[:,9]
+    dtheta_dt_tip = state[:,10]
+    #reward_val = train_params.forward_reward_weight * dx_dt_tip - train_params.ctrl_cost_weight * squared_l2_action
+    reward_val = - train_params.forward_reward_weight * np.abs(target_vel - dx_dt_tip) - train_params.ctrl_cost_weight * squared_l2_action - train_params.tip_cost_weight * dtheta_dt_tip
 
     #jump:
 

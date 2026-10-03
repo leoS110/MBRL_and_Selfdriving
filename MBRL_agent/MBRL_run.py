@@ -69,6 +69,7 @@ for rollout_i in MPC_rollout_bar: #range(train_params.rollouts_per_aggregation)
     #run MPC loop to get A(s)
     observation = observation.reshape(1, train_params.dimension_o) #make the right shape
     observation = torch.as_tensor(observation, dtype=torch.float32)
+    print("tip x velocity: ", observation[0, 8])
     initial_state_tensor = observation
     A = CEM_loop(model_list, initial_state_tensor, statediff_means_tensor, statediff_stds_tensor, x_means_tensor, x_stds_tensor)
 

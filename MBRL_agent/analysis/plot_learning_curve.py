@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.ticker import LogLocator, MaxNLocator, NullLocator, StrMethodFormatter
 
-default_csv = Path(__file__).resolve().parent / "progress.csv"
+default_csv = Path(__file__).resolve().parent / "progress_3009model.csv"
 csv_path = Path(sys.argv[1]) if len(sys.argv) > 1 else default_csv
 log = pd.read_csv(csv_path)
 
@@ -65,7 +65,7 @@ ax_l.set_yscale("log")
 ax_l.yaxis.set_major_locator(LogLocator(subs=(1, 2, 5)))
 ax_l.yaxis.set_major_formatter(StrMethodFormatter("{x:g}"))
 ax_l.yaxis.set_minor_locator(NullLocator())
-ax_l.set_ylabel("Mean training loss across ensemble")
+ax_l.set_ylabel("Mean ensemble training loss")
 ax_l.legend(loc="upper right", handlelength=1.8)
 
 for ax, tag in [(ax_r, "(a)"), (ax_l, "(b)")]:
