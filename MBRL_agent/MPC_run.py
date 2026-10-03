@@ -135,7 +135,7 @@ def step_reward_eval(state, action): #pytorch tensors
     #reward_val = train_params.forward_reward_weight * dx_dt_tip - train_params.ctrl_cost_weight * squared_l2_action - train_params.tip_cost_weight * dtheta_dt_tip
 
     #running forward with a tracking speed: effectively linear cost for velocity error (Kp)
-    target_vel = 3.5
+    target_vel = 6.0
     dx_dt_tip = state[:,8]
     squared_l2_action = action.pow(2).sum(dim=-1)
     #dz_dt_tip = state[:,9]

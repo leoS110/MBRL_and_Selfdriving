@@ -240,57 +240,75 @@ for loop_i in aggregation_bar: #equivalent to range(train_params.aggregation_ite
     logger.record("train/loss_last", mean_loss) #at the end of training, mean loss across models, for comparison against loss_first
 
     #MPC rollout progress bar & logs
-    MPC_rollout_bar = tqdm(range(train_params.rollout_steps_steps_per_aggregation // train_params.MPC_actions_per_A), desc="  MPC rollout", position=1, leave=False, unit="step")
+    #MPC_rollout_bar = tqdm(range(train_params.rollout_steps_steps_per_aggregation // train_params.MPC_actions_per_A), desc="  MPC rollout", position=1, leave=False, unit="step")
     mean_step_reward = 0.0
     env_rollout_steps = 0.0
+    MPC_episodes_rollout_bar = tqdm(range(train_params.rollout_episodes), desc="  MPC rollout", position=1, leave=False, unit="step")
+
 
     active_env = env 
     
-    for step_i in MPC_rollout_bar: #range(train_params.rollout_steps_per_aggregation), this is just total steps, not trajectories
+    #for step_i in MPC_rollout_bar: #range(train_params.rollout_steps_per_aggregation), this is just total steps, not trajectories
+    for episode_i in MPC_episodes_rollout_bar:
         t0 = time.perf_counter()
 
-        #MPC logic:
+        MPC_step_rollout_bar = tqdm(range(train_params.rollout_stepsperepisode  // train_params.MPC_actions_per_A), desc="  MPC rollout", position=1, leave=False, unit="step")
 
-        #get current state: already in variable: observation
-
-        #logic to render every train_params.render_period for a length of render_steps env steps
-        phase = step_i % (train_params.render_period // train_params.MPC_actions_per_A) #might be a bug here
-        if phase == 0: #window opens
+        if episode_i % 5 == 0:
             active_env = video_env
-            observation, info = active_env.reset()
-        elif phase == (train_params.render_period // train_params.MPC_actions_per_A): #window closes
+        else:
             active_env = env
-            observation, info = active_env.reset()
 
-        #run MPC loop to get A(s)
-        observation = observation.reshape(1, train_params.dimension_o) #make the right shape
-        observation = torch.as_tensor(observation, dtype=torch.float32)
-        initial_state_tensor = observation
-        A = CEM_loop(model_list, initial_state_tensor, statediff_means_tensor, statediff_stds_tensor, x_means_tensor, x_stds_tensor)
+        observation, info = active_env.reset()
 
-        #execute first action in A
 
-        for action_i in range(train_params.MPC_actions_per_A):
+        for step_i in MPC_step_rollout_bar:
+            t0 = time.perf_counter()
+        
 
-            action = A[action_i,:]
-            action = action.numpy() #back to numpy for env
-            next_observation, reward, terminated, truncated, info = active_env.step(action)
+            #MPC logic:
 
-            #for logging: 
-            mean_step_reward += reward
-            env_rollout_steps += 1
-            total_env_steps += 1
+            #get current state: already in variable: observation
 
-            #aggregate transition to D_RL (in numpy)
-            D_RL.add(obs=observation, action=action, next_obs=next_observation, reward=reward, terminated=terminated, truncated=truncated)
-            D_combined.add(obs=observation, action=action, next_obs=next_observation, reward=reward, terminated=terminated, truncated=truncated)
+            #logic to render every train_params.render_period for a length of render_steps env steps
+            #phase = step_i % train_params.render_period  #might be a bug here
+            #if phase == 0: #window opens
+            #    active_env = video_env
+            #    observation, info = active_env.reset()
+            #elif phase == train_params.render_period : #window closes
+            #    active_env = env
+            #    observation, info = active_env.reset()
 
-            #for next loop
-            if terminated or truncated:
-                observation, info = active_env.reset()
-                break #go back to CEM loop, no point in carrying on actions
-            else:
-                observation = next_observation
+
+            #run MPC loop to get A(s)
+            observation = observation.reshape(1, train_params.dimension_o) #make the right shape
+            observation = torch.as_tensor(observation, dtype=torch.float32)
+            initial_state_tensor = observation
+            A = CEM_loop(model_list, initial_state_tensor, statediff_means_tensor, statediff_stds_tensor, x_means_tensor, x_stds_tensor)
+
+            #execute first action in A
+
+            for action_i in range(train_params.MPC_actions_per_A):
+
+                action = A[action_i,:]
+                action = action.numpy() #back to numpy for env
+                next_observation, reward, terminated, truncated, info = active_env.step(action)
+
+                #for logging: 
+                mean_step_reward += reward
+                env_rollout_steps += 1
+                total_env_steps += 1
+
+                #aggregate transition to D_RL (in numpy)
+                D_RL.add(obs=observation, action=action, next_obs=next_observation, reward=reward, terminated=terminated, truncated=truncated)
+                D_combined.add(obs=observation, action=action, next_obs=next_observation, reward=reward, terminated=terminated, truncated=truncated)
+
+                #for next loop
+                if terminated or truncated:
+                    observation, info = active_env.reset()
+                    break #go back to CEM loop, no point in carrying on actions
+                else:
+                    observation = next_observation
 
     mean_step_reward = mean_step_reward / env_rollout_steps
 

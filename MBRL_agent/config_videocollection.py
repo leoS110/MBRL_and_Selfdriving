@@ -28,7 +28,7 @@ class TrainConfig:
     Drl_proportion: float = 0.7 #0.9 in paper
     
     MPC_horizon: int = 20 #10 in paper: 0.2s with frame_skip = 5, *0.05 to get corresponding in s
-    CEM_trajn: int = 2000 #1000 in paper, but this is for random shooting
+    CEM_trajn: int = 200 #1000 in paper, but this is for random shooting
     SGD_steps: int = 4000 #not sure,plateaus at 800 on random steps, but later 800 doesn't impact much. Careful not to pull repeated points, check this
 
     rollout_steps_steps_per_video: int = 500 
@@ -38,7 +38,7 @@ class TrainConfig:
     ensemble_size: int = 5 #no idea
 
     #really not sure, check: 
-    CEM_loopn: int = 10 #5 is standard 
+    CEM_loopn: int = 5 #5 is standard 
     CEM_elitespicked: int = 10 #not sure
     MPC_variance_init: float = 0.5 #notsure
     CEM_min_variance: float = 0.01 #mot sure

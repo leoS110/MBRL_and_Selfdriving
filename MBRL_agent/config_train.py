@@ -22,16 +22,19 @@ class TrainConfig:
 
 
     #algorithm parameters:
-    aggregation_iterations: int = 15 #7 in paper
+    aggregation_iterations: int = 4 #7 in paper
     SGD_batch_size: int = 512 #512 in paper, i think 
-    Drand_proportion: float = 0.3 #0.1 in paper
-    Drl_proportion: float = 0.7 #0.9 in paper
+    Drand_proportion: float = 0.5 #0.1 in paper
+    Drl_proportion: float = 0.5 #0.9 in paper
     
     MPC_horizon: int = 10 #10 in paper: 0.2s with frame_skip = 5, *0.05 to get corresponding in s
     CEM_trajn: int = 200 #1000 in paper, but this is for random shooting
     SGD_steps: int = 4000 #not sure,plateaus at 800 on random steps, but later 800 doesn't impact much. Careful not to pull repeated points, check this
-    rollout_steps_steps_per_aggregation: int = 9000 #9 full loops of 1000 steps before truncation: 9000 in paper
+    #rollout_steps_steps_per_aggregation: int = 9000 #9 full loops of 1000 steps before truncation: 9000 in paper
     MPC_actions_per_A: int = 1
+
+    rollout_episodes: int = 30
+    rollout_stepsperepisode: int = 300
 
     ensemble_size: int = 5 #no idea
 
@@ -45,8 +48,8 @@ class TrainConfig:
     D_RL_capacity: int = 2_000_000
 
     #random trajectory parameters: (fully eyeballed values)
-    rand_traj_length: int = 500
-    rand_traj_n: int = 200 #10 in paper
+    rand_traj_length: int = 200
+    rand_traj_n: int = 500 #10 in paper
 
     #for in window rendering
     render_period: float = 300 #300 env steps, dt * frame_skip * render_period = 0.01 * 5 * 300?
