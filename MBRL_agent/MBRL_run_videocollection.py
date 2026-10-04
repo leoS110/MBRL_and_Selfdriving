@@ -12,7 +12,7 @@ from pathlib import Path
 
 #import definitions
 
-from config_videocollection import TrainConfig, TransitionConfig
+from config_videocollection import TrainConfig, TransitionConfig_4_250
 
 from transitionbatch import TransitionBatch 
 from replay_buffer import ReplayBuffer 
@@ -22,12 +22,12 @@ from MPC_run import CEM_loop
 from velocity_plot_wrapper import VelocityPlotWrapper  
 
 train_params = TrainConfig()
+nn_params = TransitionConfig_4_250() #2 options based on the model setup used, see config saved in checkpoint used for model training
 
 
 #load transition model ensemble: 
-nn_params = TransitionConfig()
 AGENT_DIR = Path(__file__).resolve().parent 
-saved_checkpoint_path = AGENT_DIR / "models" / "3009ensemble.pt"
+saved_checkpoint_path = AGENT_DIR / "models" / "0410ensemble.pt"
 saved_checkpoint = torch.load(saved_checkpoint_path, weights_only=True)
 
 #load normalisation stats

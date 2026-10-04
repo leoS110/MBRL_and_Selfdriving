@@ -18,7 +18,7 @@ class TrainConfig:
     frametime: float = 0.01 #default 0.01
     render_mode: str = "None"
 
-    tip_cost_weight: float = 0.1 #manually addition to penalise flip in predictions
+    tip_cost_weight: float = 0.15 #manually addition to penalise flip in predictions, 0.1 during training
 
 
     #algorithm parameters:
@@ -35,7 +35,7 @@ class TrainConfig:
     video_n: int = 10
     MPC_actions_per_A: int = 1
 
-    ensemble_size: int = 5 #no idea
+    ensemble_size: int = 8 #5 normally, 8 for the 0410ensemble. Should really be in transition model params.
 
     #really not sure, check: 
     CEM_loopn: int = 5 #5 is standard 
@@ -59,6 +59,25 @@ class TransitionConfig:
 
     #NN parameters:   #check paper what they used, 4x200 in PETS?                           
     n_width: int = 200                       
+    n_layers: int = 4 #hidden layers, not including output
+
+    #optimisation parameters:
+    lr: float = 1e-3                                            
+                
+    #devide allocation:
+    device: torch.device = torch.device("cuda") #"cuda" or "cpu"
+
+
+#NN paramaters for 4x300 transition model (used in later trainings)
+@dataclass                                   
+class TransitionConfig_4_250:
+
+    #input and output data: (env specific)
+    dimension_in: int = 23                           
+    dimension_out: int = 17
+
+    #NN parameters:   #check paper what they used, 4x200 in PETS?                           
+    n_width: int = 300                       
     n_layers: int = 4 #hidden layers, not including output
 
     #optimisation parameters:

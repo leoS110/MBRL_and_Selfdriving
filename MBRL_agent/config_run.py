@@ -72,3 +72,23 @@ class TransitionConfig:
                 
     #devide allocation:
     device: torch.device = torch.device("cuda") #"cuda" or "cpu"
+
+    
+
+#NN paramaters for 4x300 transition model (used in later trainings)
+@dataclass                                   
+class TransitionConfig_4_250:
+
+    #input and output data: (env specific)
+    dimension_in: int = 23                           
+    dimension_out: int = 17
+
+    #NN parameters:   #check paper what they used, 4x200 in PETS?                           
+    n_width: int = 300                       
+    n_layers: int = 4 #hidden layers, not including output
+
+    #optimisation parameters:
+    lr: float = 1e-3                                            
+                
+    #devide allocation:
+    device: torch.device = torch.device("cuda") #"cuda" or "cpu"
