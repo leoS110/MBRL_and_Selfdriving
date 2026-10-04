@@ -22,7 +22,7 @@ class TrainConfig:
 
 
     #algorithm parameters:
-    aggregation_iterations: int = 4 #7 in paper
+    aggregation_iterations: int = 8 #7 in paper
     SGD_batch_size: int = 512 #512 in paper, i think 
     Drand_proportion: float = 0.5 #0.1 in paper
     Drl_proportion: float = 0.5 #0.9 in paper
@@ -33,10 +33,10 @@ class TrainConfig:
     #rollout_steps_steps_per_aggregation: int = 9000 #9 full loops of 1000 steps before truncation: 9000 in paper
     MPC_actions_per_A: int = 1
 
-    rollout_episodes: int = 30
-    rollout_stepsperepisode: int = 300
+    rollout_episodes: int = 60
+    rollout_stepsperepisode: int = 150
 
-    ensemble_size: int = 5 #no idea
+    ensemble_size: int = 8 #no idea
 
     #really not sure, check: 
     CEM_loopn: int = 5 #5 is standard 
@@ -67,7 +67,7 @@ class TransitionConfig:
     dimension_out: int = 17
 
     #NN parameters:   #check paper what they used, 4x200 in PETS? 150x3 worked well also                          
-    n_width: int = 200                       
+    n_width: int = 300                       
     n_layers: int = 4 #hidden layers, not including output
 
     #optimisation parameters:

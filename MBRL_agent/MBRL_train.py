@@ -243,7 +243,7 @@ for loop_i in aggregation_bar: #equivalent to range(train_params.aggregation_ite
     #MPC_rollout_bar = tqdm(range(train_params.rollout_steps_steps_per_aggregation // train_params.MPC_actions_per_A), desc="  MPC rollout", position=1, leave=False, unit="step")
     mean_step_reward = 0.0
     env_rollout_steps = 0.0
-    MPC_episodes_rollout_bar = tqdm(range(train_params.rollout_episodes), desc="  MPC rollout", position=1, leave=False, unit="step")
+    MPC_episodes_rollout_bar = tqdm(range(train_params.rollout_episodes), desc="  MPC episode", position=1, leave=False, unit="step")
 
 
     active_env = env 
@@ -252,7 +252,7 @@ for loop_i in aggregation_bar: #equivalent to range(train_params.aggregation_ite
     for episode_i in MPC_episodes_rollout_bar:
         t0 = time.perf_counter()
 
-        MPC_step_rollout_bar = tqdm(range(train_params.rollout_stepsperepisode  // train_params.MPC_actions_per_A), desc="  MPC rollout", position=1, leave=False, unit="step")
+        MPC_step_rollout_bar = tqdm(range(train_params.rollout_stepsperepisode  // train_params.MPC_actions_per_A), desc="  MPC episode step", position=2, leave=False, unit="step")
 
         if episode_i % 5 == 0:
             active_env = video_env
