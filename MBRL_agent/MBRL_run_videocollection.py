@@ -52,7 +52,7 @@ video_env = gym.wrappers.RecordVideo(
         gym.make('HalfCheetah-v5', xml_file=cheetah_xml, forward_reward_weight=train_params.forward_reward_weight, ctrl_cost_weight=train_params.ctrl_cost_weight, reset_noise_scale=train_params.reset_noise_scale, exclude_current_positions_from_observation=train_params.exclude_current_positions_from_observation, frame_skip=train_params.frame_skip, render_mode="rgb_array"),
         target_velocity = 6.0 #must pass manually into MPC_run too + change file name
     ),
-    video_folder="mbrl_videocollection/cheetah/fast",
+    video_folder="MBRL_agent/mbrl_videocollection/cheetah/fast",
     episode_trigger=lambda ep: True,        # each window starts with a reset, so each window = one clip
     video_length=train_params.rollout_steps_steps_per_video,
     name_prefix="mpc",
