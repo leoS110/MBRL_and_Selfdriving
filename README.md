@@ -21,7 +21,7 @@ See SB3_agents folder
 See MBRL_agent folder
 
 File structure:  
-Training: 
+Training:  
 config_train: dataclass holding key training algorithm, MPC, and transition model parameters, used during training  
 MBRL_train: central training algorithm + save model ensemble  
 MPC_vectorised: CEM MPC loop, vectorised due to implementation of passing all candidates to the transition model at once  
