@@ -9,3 +9,4 @@ SB3_agents/DQN/parking/training_on_empty_parking_lot_multi_goal/agents/ddqn_empt
 SB3_agents/DQN/parking/training_on_full_parking_lot_multi_goal/agents/dqn_parking_1.zip
 temp.py
 mbrl_runs
+test_setup.py
